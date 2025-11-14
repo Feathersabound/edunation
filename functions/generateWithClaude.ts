@@ -14,6 +14,9 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        const body = await req.json();
+        console.log("Received request:", body);
+
         const { 
             contentType, 
             topic, 
@@ -22,68 +25,63 @@ Deno.serve(async (req) => {
             uniqueTwist, 
             targetLength, 
             audience,
-            includeQuizzes 
-        } = await req.json();
+            includeQuizzes,
+            language = "en-US",
+            adultContent = false,
+            britishHumor = false
+        } = body;
+
+        if (!contentType || !topic) {
+            return Response.json({ error: 'Missing required fields: contentType and topic' }, { status: 400 });
+        }
+
+        const languageName = language === "en-US" ? "US English" : 
+                            language === "en-GB" ? "UK English" : language;
+
+        const humorInstruction = britishHumor ? 
+            "\n\nSTYLE: Use British humor - dry wit, dark humor, cheeky references to sexuality, and bodily function jokes where appropriate. Make it irreverent and witty." : "";
+
+        const contentInstruction = adultContent ? 
+            "\n\nCONTENT RATING: This is adult content (18+). You may include mature themes, explicit language, and adult humor." : 
+            "\n\nCONTENT RATING: Keep content appropriate for general audiences.";
 
         // Build comprehensive prompt for Claude
         const systemPrompt = contentType === "course" 
-            ? `You are an expert educational content creator specializing in online courses. Create comprehensive, engaging, and well-structured course content that matches the specified difficulty level. Include clear learning objectives, detailed explanations, and practical examples.`
-            : `You are an expert author and educational content writer. Create compelling, in-depth book content with well-researched information, engaging narrative, and clear structure. Maintain consistency in tone and depth throughout.`;
+            ? `You are an expert educational content creator. Create comprehensive, engaging course content in ${languageName}.${humorInstruction}${contentInstruction} Return ONLY valid JSON, no other text.`
+            : `You are an expert author. Create compelling book content in ${languageName}.${humorInstruction}${contentInstruction} Return ONLY valid JSON, no other text.`;
 
         const userPrompt = contentType === "course"
-            ? `Create a comprehensive ${level}-level course on "${topic}".
+            ? `Create a ${level}-level course on "${topic}" in ${languageName}.
 
 Title: ${title || topic}
-Unique angle: ${uniqueTwist || "engaging and practical approach"}
-Target audience: ${audience || "general learners"}
-Target length: ${targetLength === "short" ? "3-4 modules" : targetLength === "medium" ? "6-8 modules" : "10-15 modules"}
+Unique angle: ${uniqueTwist || "engaging and practical"}
+Audience: ${audience || "general learners"}
+Length: ${targetLength === "short" ? "3-4 modules" : targetLength === "medium" ? "5-6 modules" : "8-10 modules"}
 
-Requirements:
-- Each module should have 3-5 detailed sections
-- ${level === "phd" ? "Include research references, citations, and original insights suitable for doctoral-level study" : 
-   level === "advanced" ? "Include technical depth, case studies, and advanced concepts" : 
-   level === "intermediate" ? "Include practical examples, case studies, and real-world applications" : 
-   "Use simple language, analogies, and step-by-step explanations"}
-- Each section should be substantial (500-1000 words)
-- Include key learning points for each section
-${includeQuizzes ? "- Include 3-5 quiz questions per section with multiple choice options" : ""}
-- Make it engaging and actionable
-
-Respond with a JSON object with this structure:
+Return JSON:
 {
     "title": "Course title",
-    "description": "Comprehensive course description (150-200 words)",
+    "description": "Course description (100-150 words)",
     "modules": [
         {
             "module_title": "Module name",
             "sections": [
                 {
                     "title": "Section title",
-                    "content": "Detailed section content in markdown format",
-                    "key_points": ["point 1", "point 2", "point 3"],
-                    ${includeQuizzes ? '"quiz_questions": [{"question": "...", "options": ["A", "B", "C", "D"], "correct_answer": 0}]' : ''}
+                    "content": "Detailed markdown content (300-500 words)",
+                    "key_points": ["point 1", "point 2", "point 3"]${includeQuizzes ? ',\n                    "quiz_questions": [{"question": "...", "options": ["A", "B", "C", "D"], "correct_answer": 0}]' : ''}
                 }
             ]
         }
     ]
 }`
-            : `Write a comprehensive ${level}-level book on "${topic}".
+            : `Write a ${level}-level book on "${topic}" in ${languageName}.
 
 Title: ${title || topic}
-Unique perspective: ${uniqueTwist || "fresh and engaging"}
-Target length: ${targetLength === "short" ? "8-12 chapters" : targetLength === "medium" ? "15-20 chapters" : "25-35 chapters"}
+Perspective: ${uniqueTwist || "fresh and engaging"}
+Length: ${targetLength === "short" ? "6-8 chapters" : targetLength === "medium" ? "10-12 chapters" : "15-20 chapters"}
 
-Requirements:
-- Each chapter should be substantial (2000-4000 words)
-- ${level === "phd" ? "Academic research style with citations, original arguments, and scholarly depth" : 
-   level === "advanced" ? "Technical depth with expert-level insights and comprehensive analysis" : 
-   level === "intermediate" ? "Balanced depth with practical examples and clear explanations" : 
-   "Accessible language with clear explanations and engaging examples"}
-- Include key takeaways for each chapter (5-8 points)
-- Create a cohesive narrative that flows logically
-- Add depth and detail appropriate for book-length content
-
-Respond with a JSON object with this structure:
+Return JSON:
 {
     "title": "Book title",
     "subtitle": "Compelling subtitle",
@@ -91,45 +89,44 @@ Respond with a JSON object with this structure:
         {
             "chapter_number": 1,
             "title": "Chapter title",
-            "content": "Full chapter content in markdown format (2000-4000 words)",
-            "key_takeaways": ["takeaway 1", "takeaway 2", "takeaway 3", "takeaway 4", "takeaway 5"]
+            "content": "Full chapter in markdown (1000-2000 words)",
+            "key_takeaways": ["takeaway 1", "takeaway 2", "takeaway 3"]
         }
     ]
 }`;
 
-        // Use Claude 3.5 Sonnet for best long-form content generation
+        console.log("Calling Claude API...");
+
         const message = await anthropic.messages.create({
             model: "claude-3-5-sonnet-20241022",
-            max_tokens: 16000, // Extended tokens for long-form content
+            max_tokens: 16000,
             temperature: 0.7,
             system: systemPrompt,
-            messages: [
-                {
-                    role: "user",
-                    content: userPrompt
-                }
-            ]
+            messages: [{ role: "user", content: userPrompt }]
         });
 
-        // Extract and parse the response
+        console.log("Claude response received");
+
         const responseText = message.content[0].text;
         
-        // Try to extract JSON from the response
-        let jsonMatch = responseText.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-            // If no JSON found, try to parse the entire response
-            try {
-                const parsed = JSON.parse(responseText);
-                return Response.json({ success: true, data: parsed });
-            } catch {
-                return Response.json({ 
-                    error: 'Failed to parse response', 
-                    rawResponse: responseText 
-                }, { status: 500 });
+        // Extract JSON from response
+        let content;
+        try {
+            // Try to find JSON in the response
+            const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                content = JSON.parse(jsonMatch[0]);
+            } else {
+                content = JSON.parse(responseText);
             }
+        } catch (parseError) {
+            console.error("JSON parse error:", parseError);
+            console.error("Response text:", responseText.substring(0, 500));
+            return Response.json({ 
+                error: 'Failed to parse AI response',
+                details: parseError.message
+            }, { status: 500 });
         }
-
-        const content = JSON.parse(jsonMatch[0]);
 
         return Response.json({ 
             success: true, 
@@ -143,7 +140,7 @@ Respond with a JSON object with this structure:
     } catch (error) {
         console.error('Claude API Error:', error);
         return Response.json({ 
-            error: error.message,
+            error: error.message || 'Unknown error',
             details: error.toString()
         }, { status: 500 });
     }
