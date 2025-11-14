@@ -8,7 +8,7 @@ import {
   DialogTitle,
   DialogDescription
 } from "@/components/ui/dialog";
-import { Loader2, Zap, Lightbulb, TrendingUp, Sparkles } from "lucide-react";
+import { Loader2, Zap, Lightbulb, TrendingUp, Sparkles, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,11 +23,15 @@ export default function GrokBrainstormModal({
 }) {
   const [brainstorming, setBrainstorming] = useState(false);
   const [brainstormResults, setBrainstormResults] = useState(null);
+  const [error, setError] = useState(null);
 
   const handleBrainstorm = async () => {
     setBrainstorming(true);
+    setError(null);
     
     try {
+      console.log("Calling grokBrainstorm with:", { topic, contentType, level });
+      
       const response = await base44.functions.invoke('grokBrainstorm', {
         topic,
         contentType,
@@ -35,21 +39,23 @@ export default function GrokBrainstormModal({
         includeRealTimeData: true
       });
 
-      if (!response.data.success) {
-        throw new Error(response.data.error || 'Brainstorming failed');
+      console.log("Grok response:", response.data);
+
+      if (!response.data || !response.data.success) {
+        throw new Error(response.data?.error || 'Brainstorming failed');
       }
 
       setBrainstormResults(response.data.brainstorm);
     } catch (error) {
       console.error("Brainstorm error:", error);
-      alert("Failed to brainstorm ideas. Please try again.");
+      setError(error.message || "Failed to brainstorm. Please try again.");
     } finally {
       setBrainstorming(false);
     }
   };
 
   React.useEffect(() => {
-    if (open && !brainstormResults && topic) {
+    if (open && !brainstormResults && !error && topic) {
       handleBrainstorm();
     }
   }, [open, topic]);
@@ -83,6 +89,28 @@ export default function GrokBrainstormModal({
               <p className="text-slate-600 dark:text-slate-400">
                 Fetching real-time insights and creative angles
               </p>
+            </motion.div>
+          ) : error ? (
+            <motion.div
+              key="error"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="py-12 text-center"
+            >
+              <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-red-100 dark:bg-red-950 flex items-center justify-center">
+                <AlertCircle className="w-10 h-10 text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold mb-2 text-red-700 dark:text-red-400">Brainstorm Failed</h3>
+              <p className="text-slate-600 dark:text-slate-400 mb-4">{error}</p>
+              <div className="flex gap-2 justify-center">
+                <Button onClick={handleBrainstorm} variant="outline">
+                  Try Again
+                </Button>
+                <Button onClick={onClose}>
+                  Close
+                </Button>
+              </div>
             </motion.div>
           ) : brainstormResults ? (
             <motion.div
@@ -233,6 +261,17 @@ export default function GrokBrainstormModal({
                   <Card className="p-4 bg-slate-50 dark:bg-slate-900">
                     <p className="text-sm whitespace-pre-wrap">{brainstormResults.raw_response}</p>
                   </Card>
+                  <Button 
+                    onClick={() => {
+                      if (onSelectIdea) {
+                        onSelectIdea(brainstormResults.raw_response);
+                      }
+                      onClose();
+                    }}
+                    className="w-full mt-3"
+                  >
+                    Use This Content
+                  </Button>
                 </div>
               )}
 
