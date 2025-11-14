@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { 
   BookOpen, Plus, Search, FileText, Eye, Download 
@@ -14,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 
 export default function MyBooks() {
+  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -52,7 +52,6 @@ export default function MyBooks() {
   return (
     <div className="min-h-screen py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -78,7 +77,6 @@ export default function MyBooks() {
           </Link>
         </motion.div>
 
-        {/* Search */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -97,7 +95,6 @@ export default function MyBooks() {
           </Card>
         </motion.div>
 
-        {/* Books Grid */}
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3].map((i) => (
@@ -146,9 +143,8 @@ export default function MyBooks() {
               >
                 <Card 
                   className="glass-effect border-0 overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-105 group cursor-pointer h-full flex flex-col"
-                  onClick={() => window.location.href = `${createPageUrl("BookView")}?id=${book.id}`}
+                  onClick={() => navigate(`${createPageUrl("BookView")}?id=${book.id}`)}
                 >
-                  {/* Cover */}
                   <div className="aspect-[3/4] bg-gradient-to-br from-blue-400 via-cyan-500 to-teal-500 relative overflow-hidden">
                     {book.cover_url ? (
                       <img 
@@ -179,7 +175,6 @@ export default function MyBooks() {
                     </div>
                   </div>
 
-                  {/* Info */}
                   <div className="p-4 flex-1 flex flex-col">
                     <Badge className={`${levelColors[book.level]} mb-3 w-fit`}>
                       {book.level}
@@ -200,14 +195,6 @@ export default function MyBooks() {
                       </div>
                       <span>{book.estimated_pages || 0} pages</span>
                     </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="px-4 pb-4 flex gap-2">
-                    <Button variant="outline" className="w-full" size="sm">
-                      <Eye className="w-4 h-4 mr-2" />
-                      View
-                    </Button>
                   </div>
                 </Card>
               </motion.div>
