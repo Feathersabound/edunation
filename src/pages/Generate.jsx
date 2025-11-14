@@ -48,7 +48,7 @@ export default function Generate() {
   });
 
   const updateFormData = (field, value) => {
-    setFormData(prev => ({ ...prev.formData, [field]: value }));
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const shouldUseClaude = () => {
@@ -221,8 +221,8 @@ Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "
         setGenerationStage("Complete! 🎉");
         
         setTimeout(() => {
-          navigate(`${createPageUrl("CourseView")}?id=${course.id}`);
-        }, 1000);
+          window.location.href = `${createPageUrl("CourseView")}?id=${course.id}`;
+        }, 1500);
       } else {
         const book = await base44.entities.Book.create({
           title: aiResponse.title || formData.title || formData.topic,
@@ -240,8 +240,8 @@ Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "
         setGenerationStage("Complete! 🎉");
         
         setTimeout(() => {
-          navigate(`${createPageUrl("BookView")}?id=${book.id}`);
-        }, 1000);
+          window.location.href = `${createPageUrl("BookView")}?id=${book.id}`;
+        }, 1500);
       }
 
     } catch (error) {
