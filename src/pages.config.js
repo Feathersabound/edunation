@@ -3,6 +3,7 @@ import Generate from './pages/Generate';
 import MyCourses from './pages/MyCourses';
 import MyBooks from './pages/MyBooks';
 import CourseView from './pages/CourseView';
+import BookView from './pages/BookView';
 import Layout from './Layout.jsx';
 
 
@@ -12,6 +13,7 @@ export const PAGES = {
     "MyCourses": MyCourses,
     "MyBooks": MyBooks,
     "CourseView": CourseView,
+    "BookView": BookView,
 }
 
 export const pagesConfig = {
