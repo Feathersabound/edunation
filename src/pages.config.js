@@ -5,6 +5,9 @@ import MyBooks from './pages/MyBooks';
 import CourseView from './pages/CourseView';
 import BookView from './pages/BookView';
 import Profile from './pages/Profile';
+import CourseAuthor from './pages/CourseAuthor';
+import BookAuthor from './pages/BookAuthor';
+import AdminDashboard from './pages/AdminDashboard';
 import Layout from './Layout.jsx';
 
 
@@ -16,6 +19,9 @@ export const PAGES = {
     "CourseView": CourseView,
     "BookView": BookView,
     "Profile": Profile,
+    "CourseAuthor": CourseAuthor,
+    "BookAuthor": BookAuthor,
+    "AdminDashboard": AdminDashboard,
 }
 
 export const pagesConfig = {
