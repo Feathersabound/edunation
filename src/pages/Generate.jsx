@@ -65,14 +65,6 @@ export default function Generate() {
     try {
       const user = await base44.auth.me();
       
-      setGenerationProgress(20);
-      setGenerationStage("Perplexity verifying facts and sources...");
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      setGenerationProgress(35);
-      setGenerationStage("Grok injecting creativity and trends...");
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
       setGenerationProgress(50);
       
       let aiResponse;
@@ -212,7 +204,7 @@ export default function Generate() {
       setGenerationStage("Finalizing and saving...");
 
       if (contentType === "course") {
-        const course = await base44.entities.Course.create({
+        const courseData = {
           title: aiResponse.title || formData.title || formData.topic,
           description: aiResponse.description || `A comprehensive ${formData.level}-level course on ${formData.topic}`,
           topic: formData.topic,
@@ -230,7 +222,10 @@ export default function Generate() {
           },
           total_enrollments: 0,
           rating: 0
-        });
+        };
+
+        console.log("Creating course with data:", courseData);
+        const course = await base44.entities.Course.create(courseData);
 
         setGenerationProgress(100);
         setGenerationStage("Complete! 🎉");
@@ -238,7 +233,7 @@ export default function Generate() {
         await new Promise(resolve => setTimeout(resolve, 1000));
         navigate(createPageUrl("CourseView", `?id=${course.id}`));
       } else {
-        const book = await base44.entities.Book.create({
+        const bookData = {
           title: aiResponse.title || formData.title || formData.topic,
           subtitle: aiResponse.subtitle || `An insightful guide to ${formData.topic}`,
           author_name: user?.full_name || "Anonymous",
@@ -250,7 +245,10 @@ export default function Generate() {
           status: "completed",
           word_count: JSON.stringify(aiResponse.chapters || []).length,
           estimated_pages: Math.ceil(JSON.stringify(aiResponse.chapters || []).length / 2000)
-        });
+        };
+
+        console.log("Creating book with data:", bookData);
+        const book = await base44.entities.Book.create(bookData);
 
         setGenerationProgress(100);
         setGenerationStage("Complete! 🎉");
@@ -261,8 +259,8 @@ export default function Generate() {
 
     } catch (error) {
       console.error("Generation error:", error);
-      setGenerationStage("Error occurred. Please try again.");
-      setGenerating(false);
+      setGenerationStage(`Error: ${error.message || 'Please try again'}`);
+      setTimeout(() => setGenerating(false), 3000);
     }
   };
 
