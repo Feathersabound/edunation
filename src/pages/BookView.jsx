@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { 
   BookOpen, ChevronLeft, ChevronRight, Download, 
-  Share2, ArrowLeft, FileText, Bookmark 
+  Share2, ArrowLeft, FileText, Bookmark, Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -12,14 +12,17 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import ReactMarkdown from "react-markdown";
+import RefineContentModal from "../components/RefineContentModal";
 
 export default function BookView() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const urlParams = new URLSearchParams(window.location.search);
   const bookId = urlParams.get('id');
 
   const [currentChapter, setCurrentChapter] = useState(0);
   const [user, setUser] = useState(null);
+  const [showRefineModal, setShowRefineModal] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -105,6 +108,14 @@ export default function BookView() {
               <Badge className={levelColors[book.level]}>
                 {book.level}
               </Badge>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="rounded-xl"
+                onClick={() => setShowRefineModal(true)}
+              >
+                <Sparkles className="w-5 h-5 text-purple-600" />
+              </Button>
               <Button variant="ghost" size="icon" className="rounded-xl">
                 <Bookmark className="w-5 h-5" />
               </Button>
@@ -285,6 +296,17 @@ export default function BookView() {
           <Download className="w-6 h-6" />
         </Button>
       </div>
+
+      {/* Refine Modal */}
+      <RefineContentModal
+        open={showRefineModal}
+        onClose={() => setShowRefineModal(false)}
+        contentId={bookId}
+        contentType="book"
+        onSuccess={() => {
+          queryClient.invalidateQueries(['book', bookId]);
+        }}
+      />
     </div>
   );
 }

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { 
   BookOpen, CheckCircle2, Clock, Star, Users, 
-  ChevronRight, Play, Award, ArrowLeft 
+  ChevronRight, Play, Award, ArrowLeft, Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -14,15 +14,18 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import ReactMarkdown from "react-markdown";
+import RefineContentModal from "../components/RefineContentModal";
 
 export default function CourseView() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const urlParams = new URLSearchParams(window.location.search);
   const courseId = urlParams.get('id');
 
   const [selectedModule, setSelectedModule] = useState(0);
   const [selectedSection, setSelectedSection] = useState(0);
   const [user, setUser] = useState(null);
+  const [showRefineModal, setShowRefineModal] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -93,14 +96,24 @@ export default function CourseView() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
         
         <div className="relative h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-end pb-12">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(createPageUrl("MyCourses"))}
-            className="absolute top-8 left-8 text-white hover:bg-white/20"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
+          <div className="absolute top-8 left-8 flex gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => navigate(createPageUrl("MyCourses"))}
+              className="text-white hover:bg-white/20"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setShowRefineModal(true)}
+              className="text-white hover:bg-white/20"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              Refine with AI
+            </Button>
+          </div>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -330,6 +343,17 @@ export default function CourseView() {
           </div>
         </div>
       </div>
+
+      {/* Refine Modal */}
+      <RefineContentModal
+        open={showRefineModal}
+        onClose={() => setShowRefineModal(false)}
+        contentId={courseId}
+        contentType="course"
+        onSuccess={() => {
+          queryClient.invalidateQueries(['course', courseId]);
+        }}
+      />
     </div>
   );
 }
