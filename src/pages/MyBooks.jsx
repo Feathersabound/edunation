@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { 
-  BookOpen, Plus, Search, FileText, Eye, Download 
+  BookOpen, Plus, Search, FileText, Eye, Pencil, Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import { motion } from "framer-motion";
 
 export default function MyBooks() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [user, setUser] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -35,11 +36,29 @@ export default function MyBooks() {
     initialData: [],
   });
 
+  const deleteBookMutation = useMutation({
+    mutationFn: (bookId) => base44.entities.Book.delete(bookId),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['books']);
+    },
+  });
+
+  const handleDelete = async (bookId, bookTitle) => {
+    if (window.confirm(`Are you sure you want to delete "${bookTitle}"?`)) {
+      try {
+        await deleteBookMutation.mutateAsync(bookId);
+      } catch (error) {
+        console.error("Delete error:", error);
+        alert("Failed to delete book");
+      }
+    }
+  };
+
   const myBooks = books.filter(b => b.created_by === user?.email);
 
   const filteredBooks = myBooks.filter(book => 
-    book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    book.topic.toLowerCase().includes(searchQuery.toLowerCase())
+    book.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    book.topic?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const levelColors = {
@@ -66,15 +85,27 @@ export default function MyBooks() {
             </p>
           </div>
           
-          <Link to={createPageUrl("Generate")}>
-            <Button 
-              size="lg"
-              className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white shadow-lg rounded-2xl"
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              Write New Book
-            </Button>
-          </Link>
+          <div className="flex gap-2">
+            <Link to={createPageUrl("BookAuthor")}>
+              <Button 
+                variant="outline"
+                size="lg"
+                className="rounded-2xl"
+              >
+                <Pencil className="w-5 h-5 mr-2" />
+                Write Manually
+              </Button>
+            </Link>
+            <Link to={createPageUrl("Generate")}>
+              <Button 
+                size="lg"
+                className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white shadow-lg rounded-2xl"
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                Generate with AI
+              </Button>
+            </Link>
+          </div>
         </motion.div>
 
         <motion.div
@@ -142,10 +173,12 @@ export default function MyBooks() {
                 transition={{ delay: index * 0.1 }}
               >
                 <Card 
-                  className="glass-effect border-0 overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-105 group cursor-pointer h-full flex flex-col"
-                  onClick={() => navigate(`${createPageUrl("BookView")}?id=${book.id}`)}
+                  className="glass-effect border-0 overflow-hidden hover:shadow-2xl transition-all duration-300 group h-full flex flex-col"
                 >
-                  <div className="aspect-[3/4] bg-gradient-to-br from-blue-400 via-cyan-500 to-teal-500 relative overflow-hidden">
+                  <div 
+                    className="aspect-[3/4] bg-gradient-to-br from-blue-400 via-cyan-500 to-teal-500 relative overflow-hidden cursor-pointer"
+                    onClick={() => navigate(`${createPageUrl("BookView")}?id=${book.id}`)}
+                  >
                     {book.cover_url ? (
                       <img 
                         src={book.cover_url} 
@@ -180,7 +213,7 @@ export default function MyBooks() {
                       {book.level}
                     </Badge>
 
-                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2 line-clamp-2">
                       {book.title}
                     </h3>
                     
@@ -195,6 +228,33 @@ export default function MyBooks() {
                       </div>
                       <span>{book.estimated_pages || 0} pages</span>
                     </div>
+                  </div>
+
+                  <div className="px-4 pb-4 flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1" 
+                      size="sm"
+                      onClick={() => navigate(`${createPageUrl("BookView")}?id=${book.id}`)}
+                    >
+                      <Eye className="w-4 h-4 mr-1" />
+                      Read
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => navigate(`${createPageUrl("BookAuthor")}?id=${book.id}`)}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleDelete(book.id, book.title)}
+                      className="text-red-500 hover:bg-red-50 dark:hover:bg-red-950"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                 </Card>
               </motion.div>
