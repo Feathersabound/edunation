@@ -4,16 +4,9 @@ import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { 
   Sparkles, Home, BookOpen, GraduationCap, User, Moon, Sun, 
-  LogOut, Settings, Menu, X 
+  LogOut, Settings, Menu, X, Shield
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-const navigationItems = [
-  { title: "Dashboard", url: createPageUrl("Dashboard"), icon: Home },
-  { title: "Generate", url: createPageUrl("Generate"), icon: Sparkles },
-  { title: "My Courses", url: createPageUrl("MyCourses"), icon: GraduationCap },
-  { title: "My Books", url: createPageUrl("MyBooks"), icon: BookOpen },
-];
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
@@ -38,6 +31,17 @@ export default function Layout({ children, currentPageName }) {
       document.documentElement.classList.add('dark');
     }
   }, []);
+
+  const navigationItems = [
+    { title: "Dashboard", url: createPageUrl("Dashboard"), icon: Home },
+    { title: "Generate", url: createPageUrl("Generate"), icon: Sparkles },
+    { title: "My Courses", url: createPageUrl("MyCourses"), icon: GraduationCap },
+    { title: "My Books", url: createPageUrl("MyBooks"), icon: BookOpen },
+  ];
+
+  if (user?.role === 'admin') {
+    navigationItems.push({ title: "Admin", url: createPageUrl("AdminDashboard"), icon: Shield });
+  }
 
   const toggleTheme = () => {
     setDarkMode(!darkMode);
