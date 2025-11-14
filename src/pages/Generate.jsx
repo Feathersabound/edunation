@@ -1,10 +1,11 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { 
   Sparkles, BookOpen, GraduationCap, ArrowRight, Wand2,
-  Loader2, CheckCircle2, Image as ImageIcon, Zap, Brain, Lightbulb
+  Loader2, CheckCircle2, Image as ImageIcon, Zap, Brain, Lightbulb, Globe
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -40,7 +41,8 @@ export default function Generate() {
     includeVisuals: true,
     includeQuizzes: true,
     targetLength: "medium",
-    audience: ""
+    audience: "",
+    language: "en-US"
   });
 
   const updateFormData = (field, value) => {
@@ -87,7 +89,8 @@ export default function Generate() {
           uniqueTwist: formData.uniqueTwist,
           targetLength: formData.targetLength,
           audience: formData.audience,
-          includeQuizzes: formData.includeQuizzes
+          includeQuizzes: formData.includeQuizzes,
+          language: formData.language // Pass language to Claude
         });
 
         if (!claudeResult.data.success) {
@@ -100,14 +103,14 @@ export default function Generate() {
         setGenerationStage("Building content structure...");
 
         const contentPrompt = contentType === "course" 
-          ? `Create a comprehensive ${formData.level}-level course on "${formData.topic}". 
+          ? `Create a comprehensive ${formData.level}-level course on "${formData.topic}" in ${formData.language === "en-US" ? "US English" : formData.language === "en-GB" ? "UK English" : formData.language}.
              Title: ${formData.title || formData.topic}
              Unique angle: ${formData.uniqueTwist || "engaging and practical approach"}
              Target audience: ${formData.audience || "general learners"}
              Include: ${formData.targetLength === "short" ? "3-4" : "5-7"} modules.
              Each module should have 2-3 sections with clear learning objectives.
              Make it ${formData.level === "phd" ? "research-intensive with citations" : formData.level === "advanced" ? "technically deep" : "easy to understand"}.`
-          : `Write a ${formData.level}-level book on "${formData.topic}".
+          : `Write a ${formData.level}-level book on "${formData.topic}" in ${formData.language === "en-US" ? "US English" : formData.language === "en-GB" ? "UK English" : formData.language}.
              Title: ${formData.title || formData.topic}
              Unique perspective: ${formData.uniqueTwist || "fresh and engaging"}
              Length: ${formData.targetLength === "short" ? "5-8" : "10-15"} chapters.
@@ -367,8 +370,8 @@ export default function Generate() {
                     />
                   </div>
 
-                  {/* Level & Tier */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Level, Tier & Language */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
                       <Label htmlFor="level" className="text-base font-semibold mb-2">
                         Content Level
@@ -398,6 +401,30 @@ export default function Generate() {
                           <SelectItem value="free">Free - Open Access</SelectItem>
                           <SelectItem value="paid">Paid - Set Price</SelectItem>
                           <SelectItem value="premium">Premium - Custom</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="language" className="text-base font-semibold mb-2 flex items-center gap-2">
+                        <Globe className="w-4 h-4" />
+                        Language
+                      </Label>
+                      <Select value={formData.language} onValueChange={(val) => updateFormData("language", val)}>
+                        <SelectTrigger className="h-12">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="en-US">🇺🇸 English (US)</SelectItem>
+                          <SelectItem value="en-GB">🇬🇧 English (UK)</SelectItem>
+                          <SelectItem value="es">🇪🇸 Spanish</SelectItem>
+                          <SelectItem value="fr">🇫🇷 French</SelectItem>
+                          <SelectItem value="de">🇩🇪 German</SelectItem>
+                          <SelectItem value="zh">🇨🇳 Chinese</SelectItem>
+                          <SelectItem value="ja">🇯🇵 Japanese</SelectItem>
+                          <SelectItem value="ar">🇸🇦 Arabic</SelectItem>
+                          <SelectItem value="hi">🇮🇳 Hindi</SelectItem>
+                          <SelectItem value="pt">🇧🇷 Portuguese</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

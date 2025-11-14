@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
+import RecommendationsSection from "../components/RecommendationsSection";
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -77,26 +78,26 @@ export default function Dashboard() {
   const features = [
     {
       icon: Sparkles,
-      title: "Dual AI System",
-      description: "Main AI + Creative Agent collaborate for maximum originality",
+      title: "Multi-AI System",
+      description: "Grok AI + Claude AI + Agent collaboration",
       gradient: "from-purple-500 to-blue-600"
     },
     {
       icon: TrendingUp,
-      title: "Multi-Level Content",
-      description: "From Beginner to PhD-level materials",
+      title: "AI Recommendations",
+      description: "Personalized content suggestions",
       gradient: "from-blue-500 to-cyan-600"
     },
     {
       icon: Award,
-      title: "Monetize Your Work",
-      description: "Free, Paid, and Premium tiers with Stripe integration",
+      title: "Multi-Language",
+      description: "Create content in any language",
       gradient: "from-emerald-500 to-teal-600"
     },
     {
       icon: Zap,
-      title: "Rich Media",
-      description: "Auto-generated visuals, quizzes, and interactive elements",
+      title: "Smart Refinement",
+      description: "90%+ originality with citations",
       gradient: "from-amber-500 to-orange-600"
     },
   ];
@@ -136,7 +137,7 @@ export default function Dashboard() {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-100 to-blue-100 dark:from-purple-950 dark:to-blue-950 mb-6">
             <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
             <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
-              Powered by Ethan AI
+              Powered by Multi-AI Collaboration
             </span>
           </div>
           
@@ -199,6 +200,18 @@ export default function Dashboard() {
                 </Card>
               </motion.div>
             ))}
+          </motion.div>
+        )}
+
+        {/* AI Recommendations Section */}
+        {user && (myCourses.length > 0 || myBooks.length > 0) && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mb-16"
+          >
+            <RecommendationsSection />
           </motion.div>
         )}
 
@@ -334,7 +347,7 @@ export default function Dashboard() {
                 Ready to Create Your First Course?
               </h3>
               <p className="text-lg text-slate-600 dark:text-slate-400 mb-8">
-                Let Ethan AI guide you through creating engaging educational content 
+                Let Multi-AI guide you through creating engaging educational content 
                 that inspires and educates.
               </p>
               <Link to={createPageUrl("Generate")}>
