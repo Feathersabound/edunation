@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { 
   Sparkles, BookOpen, GraduationCap, ArrowRight, Wand2,
-  Loader2, CheckCircle2, Image as ImageIcon, Zap, Brain
+  Loader2, CheckCircle2, Image as ImageIcon, Zap, Brain, Lightbulb
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { motion, AnimatePresence } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import GrokBrainstormModal from "../components/GrokBrainstormModal";
 
 export default function Generate() {
   const navigate = useNavigate();
@@ -27,6 +28,7 @@ export default function Generate() {
   const [generating, setGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generationStage, setGenerationStage] = useState("");
+  const [showGrokModal, setShowGrokModal] = useState(false);
   
   const [formData, setFormData] = useState({
     title: "",
@@ -271,7 +273,7 @@ export default function Generate() {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-100 to-blue-100 dark:from-purple-950 dark:to-blue-950 mb-6">
             <Wand2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
             <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
-              Ethan AI Generation Studio
+              Multi-AI Generation Studio
             </span>
           </div>
           
@@ -282,7 +284,7 @@ export default function Generate() {
           </h1>
           
           <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-            Powered by dual AI collaboration—Main AI for precision, Creative Agent for originality
+            Powered by Grok AI creativity + Claude precision + specialized refinement agents
           </p>
 
           {shouldUseClaude() && (
@@ -421,9 +423,22 @@ export default function Generate() {
 
                   {/* Unique Twist */}
                   <div>
-                    <Label htmlFor="twist" className="text-base font-semibold mb-2">
-                      Unique Twist / Creative Angle
-                    </Label>
+                    <div className="flex items-center justify-between mb-2">
+                      <Label htmlFor="twist" className="text-base font-semibold">
+                        Unique Twist / Creative Angle
+                      </Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowGrokModal(true)}
+                        disabled={!formData.topic}
+                        className="gap-2"
+                      >
+                        <Lightbulb className="w-4 h-4" />
+                        Brainstorm with Grok
+                      </Button>
+                    </div>
                     <Textarea
                       id="twist"
                       placeholder="e.g., 'Explain quantum physics using cooking metaphors' or 'Focus on real-world business case studies'"
@@ -511,7 +526,7 @@ export default function Generate() {
                     className="bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white shadow-xl rounded-2xl px-8 py-6 text-lg font-semibold group"
                   >
                     <Sparkles className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform" />
-                    Generate with Ethan AI
+                    Generate with Multi-AI
                     <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </div>
@@ -587,6 +602,16 @@ export default function Generate() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Grok Brainstorm Modal */}
+      <GrokBrainstormModal
+        open={showGrokModal}
+        onClose={() => setShowGrokModal(false)}
+        topic={formData.topic}
+        contentType={contentType}
+        level={formData.level}
+        onSelectIdea={(idea) => updateFormData("uniqueTwist", idea)}
+      />
     </div>
   );
 }
