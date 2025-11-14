@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
@@ -47,7 +48,7 @@ export default function Generate() {
   });
 
   const updateFormData = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => ({ ...prev.formData, [field]: value }));
   };
 
   const shouldUseClaude = () => {
@@ -220,7 +221,7 @@ Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "
         setGenerationStage("Complete! 🎉");
         
         setTimeout(() => {
-          navigate(createPageUrl("CourseView", `?id=${course.id}`));
+          navigate(`${createPageUrl("CourseView")}?id=${course.id}`);
         }, 1000);
       } else {
         const book = await base44.entities.Book.create({
@@ -239,7 +240,7 @@ Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "
         setGenerationStage("Complete! 🎉");
         
         setTimeout(() => {
-          navigate(createPageUrl("BookView", `?id=${book.id}`));
+          navigate(`${createPageUrl("BookView")}?id=${book.id}`);
         }, 1000);
       }
 
