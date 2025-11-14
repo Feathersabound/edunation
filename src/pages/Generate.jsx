@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
@@ -93,6 +92,8 @@ export default function Generate() {
           language: formData.language
         });
 
+        console.log("Claude result:", claudeResult);
+
         if (!claudeResult.data || !claudeResult.data.success) {
           throw new Error(claudeResult.data?.error || 'Claude generation failed');
         }
@@ -177,7 +178,10 @@ Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "
         });
       }
 
+      console.log("AI Response:", aiResponse);
+
       if (!aiResponse || (contentType === "course" && !aiResponse.modules) || (contentType === "book" && !aiResponse.chapters)) {
+        console.error("Invalid AI response structure:", aiResponse);
         throw new Error("AI generated invalid content structure");
       }
 
@@ -200,7 +204,7 @@ Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "
       setGenerationStage("Saving to database...");
 
       if (contentType === "course") {
-        const course = await base44.entities.Course.create({
+        const courseData = {
           title: aiResponse.title || formData.title || formData.topic,
           description: aiResponse.description || `A ${formData.level}-level course on ${formData.topic}`,
           topic: formData.topic,
@@ -215,16 +219,20 @@ Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "
             has_visuals: !!thumbnailUrl,
             has_interactive: true
           }
-        });
+        };
+
+        console.log("Creating course with data:", courseData);
+        const course = await base44.entities.Course.create(courseData);
+        console.log("Course created:", course);
 
         setGenerationProgress(100);
         setGenerationStage("Complete! 🎉");
         
         setTimeout(() => {
-          window.location.href = `${createPageUrl("CourseView")}?id=${course.id}`;
+          navigate(`${createPageUrl("CourseView")}?id=${course.id}`);
         }, 1500);
       } else {
-        const book = await base44.entities.Book.create({
+        const bookData = {
           title: aiResponse.title || formData.title || formData.topic,
           subtitle: aiResponse.subtitle || `A comprehensive guide to ${formData.topic}`,
           author_name: user?.full_name || "Anonymous",
@@ -233,14 +241,20 @@ Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "
           unique_twist: formData.uniqueTwist || "",
           cover_url: thumbnailUrl || "",
           chapters: aiResponse.chapters,
-          status: "completed"
-        });
+          status: "completed",
+          word_count: aiResponse.chapters?.reduce((sum, ch) => sum + (ch.content?.length || 0), 0) || 0,
+          estimated_pages: Math.ceil((aiResponse.chapters?.reduce((sum, ch) => sum + (ch.content?.length || 0), 0) || 0) / 2000)
+        };
+
+        console.log("Creating book with data:", bookData);
+        const book = await base44.entities.Book.create(bookData);
+        console.log("Book created:", book);
 
         setGenerationProgress(100);
         setGenerationStage("Complete! 🎉");
         
         setTimeout(() => {
-          window.location.href = `${createPageUrl("BookView")}?id=${book.id}`;
+          navigate(`${createPageUrl("BookView")}?id=${book.id}`);
         }, 1500);
       }
 
@@ -248,6 +262,7 @@ Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "
       console.error("Generation error:", error);
       const errorMsg = error.message || error.toString() || "Generation failed";
       setGenerationStage(`Error: ${errorMsg}`);
+      alert(`Generation failed: ${errorMsg}`);
       setTimeout(() => {
         setGenerating(false);
         setGenerationProgress(0);
