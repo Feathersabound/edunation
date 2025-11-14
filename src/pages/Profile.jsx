@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { User, Mail, Award, BookOpen, GraduationCap, Save } from "lucide-react";
-import { motion } from "framer-motion";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { User, Save, Shield } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
 export default function Profile() {
@@ -16,8 +16,9 @@ export default function Profile() {
   const [formData, setFormData] = useState({
     full_name: "",
     bio: "",
-    expertise: "",
-    preferred_language: "en-US"
+    expertise: [],
+    preferred_language: "en-US",
+    show_adult_content: false
   });
 
   useEffect(() => {
@@ -28,8 +29,9 @@ export default function Profile() {
         setFormData({
           full_name: currentUser.full_name || "",
           bio: currentUser.bio || "",
-          expertise: currentUser.expertise || "",
-          preferred_language: currentUser.preferred_language || "en-US"
+          expertise: currentUser.expertise || [],
+          preferred_language: currentUser.preferred_language || "en-US",
+          show_adult_content: currentUser.show_adult_content || false
         });
       } catch (error) {
         console.error("Failed to load user:", error);
@@ -44,12 +46,12 @@ export default function Profile() {
     setSaving(true);
     try {
       await base44.auth.updateMe(formData);
-      toast.success("Profile updated successfully!");
+      toast.success("Profile updated successfully");
       const updatedUser = await base44.auth.me();
       setUser(updatedUser);
     } catch (error) {
+      console.error("Failed to update profile:", error);
       toast.error("Failed to update profile");
-      console.error(error);
     } finally {
       setSaving(false);
     }
@@ -66,147 +68,92 @@ export default function Profile() {
     );
   }
 
-  const initials = formData.full_name
-    ?.split(" ")
-    .map(n => n[0])
-    .join("")
-    .toUpperCase() || "U";
-
   return (
     <div className="min-h-screen py-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <h1 className="text-4xl font-bold mb-2">
-            <span className="gradient-text">My Profile</span>
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400">
-            Manage your account settings and preferences
-          </p>
-        </motion.div>
+        <Card className="glass-effect border-0 p-8 mb-6">
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
+              <User className="w-10 h-10 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold">{user?.full_name}</h1>
+              <p className="text-slate-600 dark:text-slate-400">{user?.email}</p>
+              <Badge className="mt-2">{user?.role}</Badge>
+            </div>
+          </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card className="glass-effect border-0 p-8 mb-6">
-            {/* Avatar Section */}
-            <div className="flex items-center gap-6 mb-8 pb-8 border-b border-slate-200 dark:border-slate-700">
-              <Avatar className="w-24 h-24 text-2xl">
-                <AvatarFallback className="bg-gradient-to-br from-purple-500 to-blue-600 text-white">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200">
-                  {formData.full_name || "User"}
-                </h2>
-                <p className="text-slate-600 dark:text-slate-400 flex items-center gap-2 mt-1">
-                  <Mail className="w-4 h-4" />
-                  {user?.email}
-                </p>
-                {user?.role && (
-                  <p className="text-sm text-purple-600 dark:text-purple-400 mt-2 flex items-center gap-2">
-                    <Award className="w-4 h-4" />
-                    {user.role === "admin" ? "Administrator" : "Creator"}
-                  </p>
-                )}
-              </div>
+          <div className="space-y-6">
+            <div>
+              <Label htmlFor="full_name">Full Name</Label>
+              <Input
+                id="full_name"
+                value={formData.full_name}
+                onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
+                className="mt-2"
+              />
             </div>
 
-            {/* Form */}
-            <div className="space-y-6">
-              <div>
-                <Label htmlFor="full_name" className="text-base font-semibold mb-2">
-                  Full Name
-                </Label>
-                <Input
-                  id="full_name"
-                  value={formData.full_name}
-                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                  className="h-12 text-base"
-                  placeholder="Your full name"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="bio" className="text-base font-semibold mb-2">
-                  Bio
-                </Label>
-                <Input
-                  id="bio"
-                  value={formData.bio}
-                  onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                  className="h-12 text-base"
-                  placeholder="Tell us about yourself"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="expertise" className="text-base font-semibold mb-2">
-                  Areas of Expertise
-                </Label>
-                <Input
-                  id="expertise"
-                  value={formData.expertise}
-                  onChange={(e) => setFormData({ ...formData, expertise: e.target.value })}
-                  className="h-12 text-base"
-                  placeholder="e.g., Physics, Marketing, History"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="preferred_language" className="text-base font-semibold mb-2">
-                  Preferred Content Language
-                </Label>
-                <select
-                  id="preferred_language"
-                  value={formData.preferred_language}
-                  onChange={(e) => setFormData({ ...formData, preferred_language: e.target.value })}
-                  className="w-full h-12 px-3 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
-                >
-                  <option value="en-US">🇺🇸 English (US)</option>
-                  <option value="en-GB">🇬🇧 English (UK)</option>
-                  <option value="es">🇪🇸 Spanish</option>
-                  <option value="fr">🇫🇷 French</option>
-                  <option value="de">🇩🇪 German</option>
-                  <option value="zh">🇨🇳 Chinese</option>
-                  <option value="ja">🇯🇵 Japanese</option>
-                  <option value="ar">🇸🇦 Arabic</option>
-                  <option value="hi">🇮🇳 Hindi</option>
-                  <option value="pt">🇧🇷 Portuguese</option>
-                </select>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-                  This will be the default language for your content generation
-                </p>
-              </div>
-
-              <div className="flex justify-end pt-6">
-                <Button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white rounded-xl px-8"
-                >
-                  {saving ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4 mr-2" />
-                      Save Changes
-                    </>
-                  )}
-                </Button>
-              </div>
+            <div>
+              <Label htmlFor="bio">Bio</Label>
+              <Textarea
+                id="bio"
+                value={formData.bio}
+                onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
+                placeholder="Tell us about yourself..."
+                className="mt-2 min-h-24"
+              />
             </div>
-          </Card>
-        </motion.div>
+
+            <div>
+              <Label htmlFor="expertise">Expertise (comma-separated)</Label>
+              <Input
+                id="expertise"
+                value={formData.expertise.join(", ")}
+                onChange={(e) => setFormData(prev => ({ 
+                  ...prev, 
+                  expertise: e.target.value.split(",").map(s => s.trim()).filter(Boolean)
+                }))}
+                placeholder="e.g., Programming, Design, Marketing"
+                className="mt-2"
+              />
+            </div>
+
+            <div className="pt-6 border-t border-slate-200 dark:border-slate-700">
+              <div className="flex items-center gap-3 mb-4">
+                <Shield className="w-5 h-5 text-red-500" />
+                <Label className="text-lg font-semibold">Content Preferences</Label>
+              </div>
+              
+              <label className="flex items-center gap-3 p-4 rounded-xl border-2 border-red-200 dark:border-red-800 hover:border-red-400 cursor-pointer transition-all bg-red-50/50 dark:bg-red-950/20">
+                <input
+                  type="checkbox"
+                  checked={formData.show_adult_content}
+                  onChange={(e) => setFormData(prev => ({ ...prev, show_adult_content: e.target.checked }))}
+                  className="w-5 h-5"
+                />
+                <span className="text-2xl">🔞</span>
+                <div className="flex-1">
+                  <div className="font-semibold text-red-700 dark:text-red-400">Show Adult Content (18+)</div>
+                  <div className="text-sm text-red-600 dark:text-red-500">
+                    Display content with mature themes and language in your library
+                  </div>
+                </div>
+              </label>
+            </div>
+
+            <div className="flex justify-end pt-6">
+              <Button
+                onClick={handleSave}
+                disabled={saving}
+                className="bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {saving ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </div>
+        </Card>
       </div>
     </div>
   );

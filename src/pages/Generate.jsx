@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { 
   Sparkles, BookOpen, GraduationCap, ArrowRight, Wand2,
-  Loader2, CheckCircle2, Image as ImageIcon, Zap, Brain, Lightbulb, Globe, Search
+  Loader2, CheckCircle2, Image as ImageIcon, Zap, Brain, Lightbulb, Globe, Search, Laugh
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -31,6 +31,7 @@ export default function Generate() {
   const [generationStage, setGenerationStage] = useState("");
   const [showGrokModal, setShowGrokModal] = useState(false);
   const [showResearchModal, setShowResearchModal] = useState(false);
+  const [user, setUser] = useState(null);
   
   const [formData, setFormData] = useState({
     title: "",
@@ -43,8 +44,22 @@ export default function Generate() {
     includeQuizzes: true,
     targetLength: "medium",
     audience: "",
-    language: "en-US"
+    language: "en-US",
+    adultContent: false,
+    britishHumor: false
   });
+
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const currentUser = await base44.auth.me();
+        setUser(currentUser);
+      } catch (error) {
+        console.error("User not authenticated");
+      }
+    };
+    loadUser();
+  }, []);
 
   const updateFormData = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -89,7 +104,9 @@ export default function Generate() {
           targetLength: formData.targetLength,
           audience: formData.audience,
           includeQuizzes: formData.includeQuizzes,
-          language: formData.language
+          language: formData.language,
+          adultContent: formData.adultContent,
+          britishHumor: formData.britishHumor
         });
 
         console.log("Claude result:", claudeResult);
@@ -105,17 +122,22 @@ export default function Generate() {
         const languageName = formData.language === "en-US" ? "US English" : 
                             formData.language === "en-GB" ? "UK English" : formData.language;
 
+        const humorNote = formData.britishHumor ? 
+          "\nIMPORTANT: Use British humor style - dry wit, dark humor, sexuality references, and bodily function jokes where appropriate. Make it cheeky and irreverent." : "";
+
         const contentPrompt = contentType === "course" 
           ? `Create a comprehensive ${formData.level}-level course on "${formData.topic}" in ${languageName}.
 ${formData.title ? `Title: ${formData.title}` : ''}
 ${formData.uniqueTwist ? `Unique angle: ${formData.uniqueTwist}` : ''}
 ${formData.audience ? `Target audience: ${formData.audience}` : ''}
+${humorNote}
 
 Create ${formData.targetLength === "short" ? "3-4" : formData.targetLength === "long" ? "8-10" : "5-6"} modules with 2-3 sections each.
 Each section needs detailed content (300+ words), key points, ${formData.includeQuizzes ? 'and 3 quiz questions.' : '.'}`
           : `Write a comprehensive ${formData.level}-level book on "${formData.topic}" in ${languageName}.
 ${formData.title ? `Title: ${formData.title}` : ''}
 ${formData.uniqueTwist ? `Unique perspective: ${formData.uniqueTwist}` : ''}
+${humorNote}
 
 Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "long" ? "15-20" : "10-12"} chapters with detailed content (800+ words each).`;
 
@@ -214,6 +236,7 @@ Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "
           thumbnail_url: thumbnailUrl || "",
           content_structure: aiResponse.modules,
           status: "published",
+          adult_content: formData.adultContent,
           engagement_features: {
             has_quizzes: formData.includeQuizzes,
             has_visuals: !!thumbnailUrl,
@@ -242,6 +265,7 @@ Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "
           cover_url: thumbnailUrl || "",
           chapters: aiResponse.chapters,
           status: "completed",
+          adult_content: formData.adultContent,
           word_count: aiResponse.chapters?.reduce((sum, ch) => sum + (ch.content?.length || 0), 0) || 0,
           estimated_pages: Math.ceil((aiResponse.chapters?.reduce((sum, ch) => sum + (ch.content?.length || 0), 0) || 0) / 2000)
         };
@@ -474,7 +498,7 @@ Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "
 
                   <div>
                     <Label className="text-base font-semibold mb-3 block">
-                      Engagement Features
+                      Content Style & Features
                     </Label>
                     <div className="space-y-3">
                       <label className="flex items-center gap-3 p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-purple-300 cursor-pointer transition-all">
@@ -506,6 +530,34 @@ Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "
                           </div>
                         </label>
                       )}
+
+                      <label className="flex items-center gap-3 p-4 rounded-xl border-2 border-red-200 dark:border-red-800 hover:border-red-400 cursor-pointer transition-all bg-red-50/50 dark:bg-red-950/20">
+                        <input
+                          type="checkbox"
+                          checked={formData.adultContent}
+                          onChange={(e) => updateFormData("adultContent", e.target.checked)}
+                          className="w-5 h-5"
+                        />
+                        <span className="text-2xl">🔞</span>
+                        <div className="flex-1">
+                          <div className="font-semibold text-red-700 dark:text-red-400">Adult Content (18+)</div>
+                          <div className="text-sm text-red-600 dark:text-red-500">Mature themes and language</div>
+                        </div>
+                      </label>
+
+                      <label className="flex items-center gap-3 p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-purple-300 cursor-pointer transition-all">
+                        <input
+                          type="checkbox"
+                          checked={formData.britishHumor}
+                          onChange={(e) => updateFormData("britishHumor", e.target.checked)}
+                          className="w-5 h-5"
+                        />
+                        <Laugh className="w-5 h-5 text-orange-500" />
+                        <div className="flex-1">
+                          <div className="font-semibold">British Humor</div>
+                          <div className="text-sm text-slate-500">Dark wit, cheeky, irreverent</div>
+                        </div>
+                      </label>
                     </div>
                   </div>
                 </div>

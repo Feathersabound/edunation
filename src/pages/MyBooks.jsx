@@ -54,12 +54,21 @@ export default function MyBooks() {
     }
   };
 
-  const myBooks = books.filter(b => b.created_by === user?.email);
-
-  const filteredBooks = myBooks.filter(book => 
-    book.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    book.topic?.toLowerCase().includes(searchQuery.toLowerCase())
+  const myBooks = books.filter(b => 
+    b.created_by === user?.email && 
+    b.chapters && 
+    b.chapters.length > 0 &&
+    b.title
   );
+
+  const showAdultContent = user?.show_adult_content || false;
+  
+  const filteredBooks = myBooks
+    .filter(book => !book.adult_content || showAdultContent)
+    .filter(book => 
+      book.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      book.topic?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
   const levelColors = {
     beginner: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
@@ -196,7 +205,7 @@ export default function MyBooks() {
                       </div>
                     )}
                     
-                    <div className="absolute top-4 left-4">
+                    <div className="absolute top-4 left-4 flex gap-2">
                       <Badge className={`${
                         book.status === 'published' ? 'bg-green-500' :
                         book.status === 'completed' ? 'bg-blue-500' :
@@ -205,6 +214,11 @@ export default function MyBooks() {
                       } text-white`}>
                         {book.status}
                       </Badge>
+                      {book.adult_content && (
+                        <Badge className="bg-red-500 text-white">
+                          18+
+                        </Badge>
+                      )}
                     </div>
                   </div>
 
