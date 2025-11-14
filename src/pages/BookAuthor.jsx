@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { 
-  Plus, Trash2, Save, ArrowLeft, Wand2, GripVertical
+  Plus, Trash2, Save, ArrowLeft, Wand2, GripVertical, Image as ImageIcon, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,8 @@ export default function BookAuthor() {
     chapters: []
   });
   const [saving, setSaving] = useState(false);
+  const [enhancingChapter, setEnhancingChapter] = useState(null);
+  const [generatingImage, setGeneratingImage] = useState(null);
 
   const { data: existingBook, isLoading } = useQuery({
     queryKey: ['book', bookId],
@@ -51,7 +53,8 @@ export default function BookAuthor() {
         chapter_number: prev.chapters.length + 1,
         title: `Chapter ${prev.chapters.length + 1}`,
         content: "",
-        key_takeaways: []
+        key_takeaways: [],
+        images: []
       }]
     }));
   };
@@ -69,32 +72,67 @@ export default function BookAuthor() {
   };
 
   const enhanceChapter = async (index) => {
+    setEnhancingChapter(index);
     try {
       const chapter = book.chapters[index];
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `Enhance this book chapter with more detailed content and key takeaways:
-
-Title: ${chapter.title}
-Current Content: ${chapter.content || "No content yet"}
-Book Level: ${book.level}
-Topic: ${book.topic}
-
-Make it comprehensive (1000-2000 words) with compelling narrative.`,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            content: { type: "string" },
-            key_takeaways: { type: "array", items: { type: "string" } }
-          }
-        }
+      
+      const response = await base44.functions.invoke('generateWithClaude', {
+        contentType: "book",
+        topic: book.topic,
+        title: chapter.title,
+        level: book.level,
+        uniqueTwist: chapter.content || "Expand this chapter with detailed, engaging content",
+        targetLength: "medium",
+        adultContent: book.adult_content,
+        britishHumor: false
       });
 
-      updateChapter(index, "content", result.content);
-      updateChapter(index, "key_takeaways", result.key_takeaways);
+      if (response.data && response.data.success && response.data.data.chapters) {
+        const enhancedChapter = response.data.data.chapters[0];
+        updateChapter(index, "content", enhancedChapter.content);
+        updateChapter(index, "key_takeaways", enhancedChapter.key_takeaways || []);
+      } else {
+        throw new Error("Invalid AI response");
+      }
     } catch (error) {
       console.error("AI enhancement error:", error);
-      alert("Failed to enhance with AI");
+      alert("Failed to enhance with AI: " + error.message);
+    } finally {
+      setEnhancingChapter(null);
     }
+  };
+
+  const generateChapterImage = async (index) => {
+    setGeneratingImage(index);
+    try {
+      const chapter = book.chapters[index];
+      
+      const imagePrompt = book.adult_content
+        ? `Artistic adult-themed illustration for "${chapter.title}". Topic: ${book.topic}. Sensual, mature, artistic photography style. High quality, professional lighting.`
+        : `Professional educational illustration for "${chapter.title}". Topic: ${book.topic}. Modern, clean design with purple and blue gradients.`;
+
+      const imageResult = await base44.integrations.Core.GenerateImage({
+        prompt: imagePrompt
+      });
+
+      if (imageResult?.url) {
+        const currentImages = chapter.images || [];
+        updateChapter(index, "images", [...currentImages, imageResult.url]);
+      } else {
+        throw new Error("No image URL returned");
+      }
+    } catch (error) {
+      console.error("Image generation error:", error);
+      alert("Failed to generate image: " + error.message);
+    } finally {
+      setGeneratingImage(null);
+    }
+  };
+
+  const removeChapterImage = (chapterIndex, imageIndex) => {
+    const chapter = book.chapters[chapterIndex];
+    const newImages = chapter.images.filter((_, idx) => idx !== imageIndex);
+    updateChapter(chapterIndex, "images", newImages);
   };
 
   const handleSave = async () => {
@@ -204,7 +242,7 @@ Make it comprehensive (1000-2000 words) with compelling narrative.`,
                   onChange={(e) => setBook(prev => ({ ...prev, adult_content: e.target.checked }))}
                   className="w-4 h-4"
                 />
-                Adult Content
+                Adult Content (18+)
               </Label>
             </div>
           </div>
@@ -228,9 +266,27 @@ Make it comprehensive (1000-2000 words) with compelling narrative.`,
                     variant="ghost"
                     size="sm"
                     onClick={() => enhanceChapter(index)}
+                    disabled={enhancingChapter === index}
                   >
-                    <Wand2 className="w-4 h-4 mr-1" />
+                    {enhancingChapter === index ? (
+                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                    ) : (
+                      <Wand2 className="w-4 h-4 mr-1" />
+                    )}
                     AI Enhance
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => generateChapterImage(index)}
+                    disabled={generatingImage === index}
+                  >
+                    {generatingImage === index ? (
+                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                    ) : (
+                      <ImageIcon className="w-4 h-4 mr-1" />
+                    )}
+                    Image
                   </Button>
                   <Button
                     variant="ghost"
@@ -242,12 +298,48 @@ Make it comprehensive (1000-2000 words) with compelling narrative.`,
                   </Button>
                 </div>
               </div>
+
+              {chapter.images && chapter.images.length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+                  {chapter.images.map((img, imgIdx) => (
+                    <div key={imgIdx} className="relative group">
+                      <img 
+                        src={img} 
+                        alt={`Chapter ${chapter.chapter_number} illustration`}
+                        className="w-full h-32 object-cover rounded-lg"
+                      />
+                      <button
+                        onClick={() => removeChapterImage(index, imgIdx)}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <Textarea
                 value={chapter.content}
                 onChange={(e) => updateChapter(index, "content", e.target.value)}
                 placeholder="Chapter content (supports markdown)"
                 className="min-h-48 mb-3"
               />
+
+              {chapter.key_takeaways && chapter.key_takeaways.length > 0 && (
+                <div className="bg-blue-50 dark:bg-blue-950 rounded-lg p-4 mt-3">
+                  <h4 className="font-semibold text-sm text-blue-700 dark:text-blue-300 mb-2">
+                    Key Takeaways:
+                  </h4>
+                  <ul className="space-y-1">
+                    {chapter.key_takeaways.map((takeaway, idx) => (
+                      <li key={idx} className="text-sm text-slate-600 dark:text-slate-400">
+                        • {takeaway}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </Card>
           ))}
         </div>
