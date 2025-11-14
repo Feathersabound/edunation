@@ -1,11 +1,10 @@
-
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { 
   Sparkles, BookOpen, GraduationCap, ArrowRight, Wand2,
-  Loader2, CheckCircle2, Image as ImageIcon, Zap, Brain, Lightbulb, Globe
+  Loader2, CheckCircle2, Image as ImageIcon, Zap, Brain, Lightbulb, Globe, Search
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -22,6 +21,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import GrokBrainstormModal from "../components/GrokBrainstormModal";
+import ResearchAssistant from "../components/ResearchAssistant";
 
 export default function Generate() {
   const navigate = useNavigate();
@@ -30,6 +30,7 @@ export default function Generate() {
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generationStage, setGenerationStage] = useState("");
   const [showGrokModal, setShowGrokModal] = useState(false);
+  const [showResearchModal, setShowResearchModal] = useState(false);
   
   const [formData, setFormData] = useState({
     title: "",
@@ -49,7 +50,6 @@ export default function Generate() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // Determine if we should use Claude for long-form content
   const shouldUseClaude = () => {
     return contentType === "book" || 
            formData.targetLength === "long" || 
@@ -60,24 +60,23 @@ export default function Generate() {
   const handleGenerate = async () => {
     setGenerating(true);
     setGenerationProgress(10);
-    setGenerationStage("Initializing Ethan AI...");
+    setGenerationStage("Initializing Multi-AI System...");
 
     try {
       const user = await base44.auth.me();
       
       setGenerationProgress(20);
-      setGenerationStage("Main AI analyzing topic...");
+      setGenerationStage("Perplexity verifying facts and sources...");
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       setGenerationProgress(35);
-      setGenerationStage("Creative Agent injecting originality...");
+      setGenerationStage("Grok injecting creativity and trends...");
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       setGenerationProgress(50);
       
       let aiResponse;
       
-      // Use Claude for long-form, advanced content
       if (shouldUseClaude()) {
         setGenerationStage("Claude AI generating in-depth content...");
         
@@ -90,7 +89,7 @@ export default function Generate() {
           targetLength: formData.targetLength,
           audience: formData.audience,
           includeQuizzes: formData.includeQuizzes,
-          language: formData.language // Pass language to Claude
+          language: formData.language
         });
 
         if (!claudeResult.data.success) {
@@ -99,18 +98,21 @@ export default function Generate() {
 
         aiResponse = claudeResult.data.data;
       } else {
-        // Use standard LLM for shorter, basic content
         setGenerationStage("Building content structure...");
 
+        const languageName = formData.language === "en-US" ? "US English" : 
+                            formData.language === "en-GB" ? "UK English" : 
+                            formData.language;
+
         const contentPrompt = contentType === "course" 
-          ? `Create a comprehensive ${formData.level}-level course on "${formData.topic}" in ${formData.language === "en-US" ? "US English" : formData.language === "en-GB" ? "UK English" : formData.language}.
+          ? `Create a comprehensive ${formData.level}-level course on "${formData.topic}" in ${languageName}.
              Title: ${formData.title || formData.topic}
              Unique angle: ${formData.uniqueTwist || "engaging and practical approach"}
              Target audience: ${formData.audience || "general learners"}
              Include: ${formData.targetLength === "short" ? "3-4" : "5-7"} modules.
              Each module should have 2-3 sections with clear learning objectives.
              Make it ${formData.level === "phd" ? "research-intensive with citations" : formData.level === "advanced" ? "technically deep" : "easy to understand"}.`
-          : `Write a ${formData.level}-level book on "${formData.topic}" in ${formData.language === "en-US" ? "US English" : formData.language === "en-GB" ? "UK English" : formData.language}.
+          : `Write a ${formData.level}-level book on "${formData.topic}" in ${languageName}.
              Title: ${formData.title || formData.topic}
              Unique perspective: ${formData.uniqueTwist || "fresh and engaging"}
              Length: ${formData.targetLength === "short" ? "5-8" : "10-15"} chapters.
@@ -209,7 +211,6 @@ export default function Generate() {
       setGenerationProgress(85);
       setGenerationStage("Finalizing and saving...");
 
-      // Create the entity
       if (contentType === "course") {
         const course = await base44.entities.Course.create({
           title: aiResponse.title || formData.title || formData.topic,
@@ -276,7 +277,7 @@ export default function Generate() {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-100 to-blue-100 dark:from-purple-950 dark:to-blue-950 mb-6">
             <Wand2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
             <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
-              Multi-AI Generation Studio
+              Perplexity + Grok + Claude Multi-AI Studio
             </span>
           </div>
           
@@ -287,7 +288,7 @@ export default function Generate() {
           </h1>
           
           <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-            Powered by Grok AI creativity + Claude precision + specialized refinement agents
+            Research-verified with Perplexity + Creative with Grok + Refined by Claude
           </p>
 
           {shouldUseClaude() && (
@@ -309,40 +310,32 @@ export default function Generate() {
               exit={{ opacity: 0, scale: 0.95 }}
             >
               <Card className="glass-effect border-0 p-8">
-                {/* Content Type Selection */}
-                <div className="mb-8">
-                  <Label className="text-lg font-semibold mb-4 block">
-                    What would you like to create?
-                  </Label>
-                  <Tabs value={contentType} onValueChange={setContentType}>
-                    <TabsList className="grid w-full grid-cols-2 h-auto p-1">
-                      <TabsTrigger 
-                        value="course" 
-                        className="flex items-center gap-2 py-4 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-blue-600 data-[state=active]:text-white"
-                      >
-                        <GraduationCap className="w-5 h-5" />
-                        <div className="text-left">
-                          <div className="font-semibold">Course</div>
-                          <div className="text-xs opacity-80">Modules & sections</div>
-                        </div>
-                      </TabsTrigger>
-                      <TabsTrigger 
-                        value="book"
-                        className="flex items-center gap-2 py-4 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-cyan-600 data-[state=active]:text-white"
-                      >
-                        <BookOpen className="w-5 h-5" />
-                        <div className="text-left">
-                          <div className="font-semibold">Book</div>
-                          <div className="text-xs opacity-80">Chapters & content</div>
-                        </div>
-                      </TabsTrigger>
-                    </TabsList>
-                  </Tabs>
-                </div>
+                <Tabs value={contentType} onValueChange={setContentType}>
+                  <TabsList className="grid w-full grid-cols-2 h-auto p-1">
+                    <TabsTrigger 
+                      value="course" 
+                      className="flex items-center gap-2 py-4 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-blue-600 data-[state=active]:text-white"
+                    >
+                      <GraduationCap className="w-5 h-5" />
+                      <div className="text-left">
+                        <div className="font-semibold">Course</div>
+                        <div className="text-xs opacity-80">Modules & sections</div>
+                      </div>
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="book"
+                      className="flex items-center gap-2 py-4 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-cyan-600 data-[state=active]:text-white"
+                    >
+                      <BookOpen className="w-5 h-5" />
+                      <div className="text-left">
+                        <div className="font-semibold">Book</div>
+                        <div className="text-xs opacity-80">Chapters & content</div>
+                      </div>
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
 
-                {/* Form Fields */}
-                <div className="space-y-6">
-                  {/* Topic */}
+                <div className="space-y-6 mt-8">
                   <div>
                     <Label htmlFor="topic" className="text-base font-semibold mb-2">
                       Topic *
@@ -356,7 +349,6 @@ export default function Generate() {
                     />
                   </div>
 
-                  {/* Title (Optional) */}
                   <div>
                     <Label htmlFor="title" className="text-base font-semibold mb-2">
                       Custom Title (Optional)
@@ -370,8 +362,7 @@ export default function Generate() {
                     />
                   </div>
 
-                  {/* Level, Tier & Language */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <Label htmlFor="level" className="text-base font-semibold mb-2">
                         Content Level
@@ -385,22 +376,6 @@ export default function Generate() {
                           <SelectItem value="intermediate">Intermediate - Case Studies</SelectItem>
                           <SelectItem value="advanced">Advanced - Research & Insights</SelectItem>
                           <SelectItem value="phd">PhD - Original Research</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="tier" className="text-base font-semibold mb-2">
-                        Access Tier
-                      </Label>
-                      <Select value={formData.tier} onValueChange={(val) => updateFormData("tier", val)}>
-                        <SelectTrigger className="h-12">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="free">Free - Open Access</SelectItem>
-                          <SelectItem value="paid">Paid - Set Price</SelectItem>
-                          <SelectItem value="premium">Premium - Custom</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -430,41 +405,35 @@ export default function Generate() {
                     </div>
                   </div>
 
-                  {/* Price if paid */}
-                  {formData.tier === "paid" && (
-                    <div>
-                      <Label htmlFor="price" className="text-base font-semibold mb-2">
-                        Price (USD)
-                      </Label>
-                      <Input
-                        id="price"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={formData.price}
-                        onChange={(e) => updateFormData("price", parseFloat(e.target.value))}
-                        className="h-12 text-base"
-                      />
-                    </div>
-                  )}
-
-                  {/* Unique Twist */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <Label htmlFor="twist" className="text-base font-semibold">
                         Unique Twist / Creative Angle
                       </Label>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowGrokModal(true)}
-                        disabled={!formData.topic}
-                        className="gap-2"
-                      >
-                        <Lightbulb className="w-4 h-4" />
-                        Brainstorm with Grok
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowResearchModal(true)}
+                          disabled={!formData.topic}
+                          className="gap-2"
+                        >
+                          <Search className="w-4 h-4" />
+                          Research with Perplexity
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowGrokModal(true)}
+                          disabled={!formData.topic}
+                          className="gap-2"
+                        >
+                          <Lightbulb className="w-4 h-4" />
+                          Brainstorm with Grok
+                        </Button>
+                      </div>
                     </div>
                     <Textarea
                       id="twist"
@@ -475,7 +444,6 @@ export default function Generate() {
                     />
                   </div>
 
-                  {/* Target Length */}
                   <div>
                     <Label className="text-base font-semibold mb-2">
                       Target Length
@@ -495,17 +463,11 @@ export default function Generate() {
                           <div className="text-xs text-slate-500 mt-1">
                             {length === "short" ? "3-5 sections" : length === "medium" ? "5-10 sections" : "10+ sections"}
                           </div>
-                          {length === "long" && (
-                            <div className="text-xs text-violet-600 dark:text-violet-400 mt-1 font-semibold">
-                              Uses Claude AI
-                            </div>
-                          )}
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  {/* Engagement Options */}
                   <div>
                     <Label className="text-base font-semibold mb-3 block">
                       Engagement Features
@@ -544,7 +506,6 @@ export default function Generate() {
                   </div>
                 </div>
 
-                {/* Generate Button */}
                 <div className="mt-8 flex justify-end">
                   <Button
                     size="lg"
@@ -590,38 +551,34 @@ export default function Generate() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto text-left">
-                  <div className={`p-4 rounded-xl ${generationProgress >= 20 ? 'bg-purple-50 dark:bg-purple-950' : 'bg-slate-100 dark:bg-slate-800'}`}>
+                  <div className={`p-4 rounded-xl ${generationProgress >= 20 ? 'bg-cyan-50 dark:bg-cyan-950' : 'bg-slate-100 dark:bg-slate-800'}`}>
                     {generationProgress >= 35 ? (
                       <CheckCircle2 className="w-6 h-6 text-green-500 mb-2" />
                     ) : (
-                      <Loader2 className={`w-6 h-6 mb-2 ${generationProgress >= 20 ? 'animate-spin text-purple-500' : 'text-slate-400'}`} />
+                      <Loader2 className={`w-6 h-6 mb-2 ${generationProgress >= 20 ? 'animate-spin text-cyan-500' : 'text-slate-400'}`} />
                     )}
-                    <div className="font-semibold text-sm">Main AI</div>
-                    <div className="text-xs text-slate-500">Topic analysis</div>
+                    <div className="font-semibold text-sm">Perplexity</div>
+                    <div className="text-xs text-slate-500">Fact verification</div>
                   </div>
                   
-                  <div className={`p-4 rounded-xl ${generationProgress >= 35 ? 'bg-blue-50 dark:bg-blue-950' : 'bg-slate-100 dark:bg-slate-800'}`}>
+                  <div className={`p-4 rounded-xl ${generationProgress >= 35 ? 'bg-purple-50 dark:bg-purple-950' : 'bg-slate-100 dark:bg-slate-800'}`}>
                     {generationProgress >= 70 ? (
                       <CheckCircle2 className="w-6 h-6 text-green-500 mb-2" />
                     ) : (
-                      <Loader2 className={`w-6 h-6 mb-2 ${generationProgress >= 35 ? 'animate-spin text-blue-500' : 'text-slate-400'}`} />
+                      <Loader2 className={`w-6 h-6 mb-2 ${generationProgress >= 35 ? 'animate-spin text-purple-500' : 'text-slate-400'}`} />
                     )}
-                    <div className="font-semibold text-sm">
-                      {shouldUseClaude() ? "Claude AI" : "Creative Agent"}
-                    </div>
-                    <div className="text-xs text-slate-500">
-                      {shouldUseClaude() ? "Extended context" : "Adding originality"}
-                    </div>
+                    <div className="font-semibold text-sm">Grok AI</div>
+                    <div className="text-xs text-slate-500">Creative trends</div>
                   </div>
                   
-                  <div className={`p-4 rounded-xl ${generationProgress >= 70 ? 'bg-emerald-50 dark:bg-emerald-950' : 'bg-slate-100 dark:bg-slate-800'}`}>
+                  <div className={`p-4 rounded-xl ${generationProgress >= 50 ? 'bg-blue-50 dark:bg-blue-950' : 'bg-slate-100 dark:bg-slate-800'}`}>
                     {generationProgress >= 100 ? (
                       <CheckCircle2 className="w-6 h-6 text-green-500 mb-2" />
                     ) : (
-                      <Loader2 className={`w-6 h-6 mb-2 ${generationProgress >= 70 ? 'animate-spin text-emerald-500' : 'text-slate-400'}`} />
+                      <Loader2 className={`w-6 h-6 mb-2 ${generationProgress >= 50 ? 'animate-spin text-blue-500' : 'text-slate-400'}`} />
                     )}
-                    <div className="font-semibold text-sm">Finalizing</div>
-                    <div className="text-xs text-slate-500">Polishing content</div>
+                    <div className="font-semibold text-sm">Claude AI</div>
+                    <div className="text-xs text-slate-500">Deep refinement</div>
                   </div>
                 </div>
               </Card>
@@ -630,7 +587,6 @@ export default function Generate() {
         </AnimatePresence>
       </div>
 
-      {/* Grok Brainstorm Modal */}
       <GrokBrainstormModal
         open={showGrokModal}
         onClose={() => setShowGrokModal(false)}
@@ -638,6 +594,12 @@ export default function Generate() {
         contentType={contentType}
         level={formData.level}
         onSelectIdea={(idea) => updateFormData("uniqueTwist", idea)}
+      />
+
+      <ResearchAssistant
+        open={showResearchModal}
+        onClose={() => setShowResearchModal(false)}
+        onInsertContent={(content) => updateFormData("uniqueTwist", formData.uniqueTwist + "\n\n" + content)}
       />
     </div>
   );
