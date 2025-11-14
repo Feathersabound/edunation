@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { 
   Sparkles, BookOpen, GraduationCap, ArrowRight, Wand2,
-  Loader2, CheckCircle2, Image as ImageIcon, Zap, Brain, Lightbulb, Globe, Search, Laugh
+  Loader2, Image as ImageIcon, Zap, Globe, Search, Laugh, Edit3
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -21,7 +21,8 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import GrokBrainstormModal from "../components/GrokBrainstormModal";
-import ResearchAssistant from "../components/ResearchAssistant";
+import EnhancedResearchAssistant from "../components/EnhancedResearchAssistant";
+import AIContentEditor from "../components/AIContentEditor";
 
 export default function Generate() {
   const navigate = useNavigate();
@@ -31,6 +32,7 @@ export default function Generate() {
   const [generationStage, setGenerationStage] = useState("");
   const [showGrokModal, setShowGrokModal] = useState(false);
   const [showResearchModal, setShowResearchModal] = useState(false);
+  const [showEditorModal, setShowEditorModal] = useState(false);
   const [user, setUser] = useState(null);
   
   const [formData, setFormData] = useState({
@@ -290,7 +292,7 @@ Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "
           </h1>
           
           <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-            Choose your AI model and generate professional content
+            Full automation with AI research, brainstorming, and editing
           </p>
         </motion.div>
 
@@ -438,8 +440,19 @@ Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "
                           disabled={!formData.topic}
                           className="gap-2"
                         >
-                          <Lightbulb className="w-4 h-4" />
+                          <Sparkles className="w-4 h-4" />
                           Brainstorm
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowEditorModal(true)}
+                          disabled={!formData.uniqueTwist}
+                          className="gap-2"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                          Edit AI
                         </Button>
                       </div>
                     </div>
@@ -600,10 +613,18 @@ Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "
         onSelectIdea={(idea) => updateFormData("uniqueTwist", idea)}
       />
 
-      <ResearchAssistant
+      <EnhancedResearchAssistant
         open={showResearchModal}
         onClose={() => setShowResearchModal(false)}
+        initialQuery={formData.topic}
         onInsertContent={(content) => updateFormData("uniqueTwist", formData.uniqueTwist + "\n\n" + content)}
+      />
+
+      <AIContentEditor
+        open={showEditorModal}
+        onClose={() => setShowEditorModal(false)}
+        initialContent={formData.uniqueTwist}
+        onApply={(content) => updateFormData("uniqueTwist", content)}
       />
     </div>
   );
