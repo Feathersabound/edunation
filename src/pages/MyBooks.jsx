@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -121,7 +122,7 @@ export default function MyBooks() {
                 No books yet
               </h3>
               <p className="text-slate-600 dark:text-slate-400 mb-8">
-                Write your first book with the power of Ethan AI
+                Write your first book with the power of AI
               </p>
               <Link to={createPageUrl("Generate")}>
                 <Button 
@@ -143,73 +144,70 @@ export default function MyBooks() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
               >
-                <Card className="glass-effect border-0 overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-105 group cursor-pointer h-full flex flex-col">
-                  <Link to={createPageUrl("BookView", `?id=${book.id}`)}>
-                    {/* Cover */}
-                    <div className="aspect-[3/4] bg-gradient-to-br from-blue-400 via-cyan-500 to-teal-500 relative overflow-hidden">
-                      {book.cover_url ? (
-                        <img 
-                          src={book.cover_url} 
-                          alt={book.title}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center p-6">
-                          <div className="text-center">
-                            <BookOpen className="w-16 h-16 text-white/30 mx-auto mb-4" />
-                            <h4 className="text-white font-bold text-lg line-clamp-3">
-                              {book.title}
-                            </h4>
-                          </div>
+                <Card 
+                  className="glass-effect border-0 overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-105 group cursor-pointer h-full flex flex-col"
+                  onClick={() => window.location.href = `${createPageUrl("BookView")}?id=${book.id}`}
+                >
+                  {/* Cover */}
+                  <div className="aspect-[3/4] bg-gradient-to-br from-blue-400 via-cyan-500 to-teal-500 relative overflow-hidden">
+                    {book.cover_url ? (
+                      <img 
+                        src={book.cover_url} 
+                        alt={book.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center p-6">
+                        <div className="text-center">
+                          <BookOpen className="w-16 h-16 text-white/30 mx-auto mb-4" />
+                          <h4 className="text-white font-bold text-lg line-clamp-3">
+                            {book.title}
+                          </h4>
                         </div>
-                      )}
-                      
-                      {/* Status */}
-                      <div className="absolute top-4 left-4">
-                        <Badge className={`${
-                          book.status === 'published' ? 'bg-green-500' :
-                          book.status === 'completed' ? 'bg-blue-500' :
-                          book.status === 'generating' ? 'bg-amber-500' :
-                          'bg-slate-500'
-                        } text-white`}>
-                          {book.status}
-                        </Badge>
                       </div>
-                    </div>
-
-                    {/* Info */}
-                    <div className="p-4 flex-1 flex flex-col">
-                      <Badge className={`${levelColors[book.level]} mb-3 w-fit`}>
-                        {book.level}
+                    )}
+                    
+                    <div className="absolute top-4 left-4">
+                      <Badge className={`${
+                        book.status === 'published' ? 'bg-green-500' :
+                        book.status === 'completed' ? 'bg-blue-500' :
+                        book.status === 'generating' ? 'bg-amber-500' :
+                        'bg-slate-500'
+                      } text-white`}>
+                        {book.status}
                       </Badge>
-
-                      <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
-                        {book.title}
-                      </h3>
-                      
-                      <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 mb-3 flex-1">
-                        {book.subtitle || book.topic}
-                      </p>
-
-                      {/* Stats */}
-                      <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-3 border-t border-slate-200 dark:border-slate-700">
-                        <div className="flex items-center gap-1">
-                          <FileText className="w-3 h-3" />
-                          <span>{book.chapters?.length || 0} chapters</span>
-                        </div>
-                        <span>{book.estimated_pages || 0} pages</span>
-                      </div>
                     </div>
-                  </Link>
+                  </div>
+
+                  {/* Info */}
+                  <div className="p-4 flex-1 flex flex-col">
+                    <Badge className={`${levelColors[book.level]} mb-3 w-fit`}>
+                      {book.level}
+                    </Badge>
+
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
+                      {book.title}
+                    </h3>
+                    
+                    <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 mb-3 flex-1">
+                      {book.subtitle || book.topic}
+                    </p>
+
+                    <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-3 border-t border-slate-200 dark:border-slate-700">
+                      <div className="flex items-center gap-1">
+                        <FileText className="w-3 h-3" />
+                        <span>{book.chapters?.length || 0} chapters</span>
+                      </div>
+                      <span>{book.estimated_pages || 0} pages</span>
+                    </div>
+                  </div>
 
                   {/* Actions */}
                   <div className="px-4 pb-4 flex gap-2">
-                    <Link to={createPageUrl("BookView", `?id=${book.id}`)} className="flex-1">
-                      <Button variant="outline" className="w-full" size="sm">
-                        <Eye className="w-4 h-4 mr-2" />
-                        View
-                      </Button>
-                    </Link>
+                    <Button variant="outline" className="w-full" size="sm">
+                      <Eye className="w-4 h-4 mr-2" />
+                      View
+                    </Button>
                   </div>
                 </Card>
               </motion.div>
