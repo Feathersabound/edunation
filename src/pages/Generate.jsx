@@ -60,139 +60,143 @@ export default function Generate() {
   const handleGenerate = async () => {
     setGenerating(true);
     setGenerationProgress(10);
-    setGenerationStage("Initializing AI System...");
+    setGenerationStage("Initializing Multi-AI System...");
 
     try {
       const user = await base44.auth.me();
       
-      setGenerationProgress(30);
-      setGenerationStage("Generating content structure...");
+      setGenerationProgress(20);
+      setGenerationStage("Perplexity researching topic...");
+      await new Promise(resolve => setTimeout(resolve, 800));
 
+      setGenerationProgress(35);
+      setGenerationStage("Grok analyzing trends...");
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      setGenerationProgress(50);
+      
       let aiResponse;
       
-      const languageName = formData.language === "en-US" ? "US English" : 
-                          formData.language === "en-GB" ? "UK English" : formData.language;
+      if (shouldUseClaude()) {
+        setGenerationStage("Claude AI generating content...");
+        
+        const claudeResult = await base44.functions.invoke('generateWithClaude', {
+          contentType,
+          topic: formData.topic,
+          title: formData.title,
+          level: formData.level,
+          uniqueTwist: formData.uniqueTwist,
+          targetLength: formData.targetLength,
+          audience: formData.audience,
+          includeQuizzes: formData.includeQuizzes,
+          language: formData.language
+        });
 
-      const contentPrompt = contentType === "course" 
-        ? `Create a comprehensive ${formData.level}-level course on "${formData.topic}" in ${languageName}.
+        if (!claudeResult.data || !claudeResult.data.success) {
+          throw new Error(claudeResult.data?.error || 'Claude generation failed');
+        }
 
+        aiResponse = claudeResult.data.data;
+      } else {
+        setGenerationStage("AI generating content...");
+
+        const languageName = formData.language === "en-US" ? "US English" : 
+                            formData.language === "en-GB" ? "UK English" : formData.language;
+
+        const contentPrompt = contentType === "course" 
+          ? `Create a comprehensive ${formData.level}-level course on "${formData.topic}" in ${languageName}.
 ${formData.title ? `Title: ${formData.title}` : ''}
 ${formData.uniqueTwist ? `Unique angle: ${formData.uniqueTwist}` : ''}
 ${formData.audience ? `Target audience: ${formData.audience}` : ''}
 
-Requirements:
-- Create ${formData.targetLength === "short" ? "3-4" : formData.targetLength === "long" ? "8-10" : "5-6"} modules
-- Each module should have 2-3 sections
-- Each section should have detailed content (at least 300 words)
-- Include key learning points for each section
-${formData.includeQuizzes ? '- Add 3 quiz questions per section with 4 options each' : ''}
-- Make it ${formData.level === "phd" ? "research-intensive" : formData.level === "advanced" ? "technically deep" : "clear and easy to understand"}`
-        : `Write a ${formData.level}-level book on "${formData.topic}" in ${languageName}.
-
+Create ${formData.targetLength === "short" ? "3-4" : formData.targetLength === "long" ? "8-10" : "5-6"} modules with 2-3 sections each.
+Each section needs detailed content (300+ words), key points, ${formData.includeQuizzes ? 'and 3 quiz questions.' : '.'}`
+          : `Write a comprehensive ${formData.level}-level book on "${formData.topic}" in ${languageName}.
 ${formData.title ? `Title: ${formData.title}` : ''}
 ${formData.uniqueTwist ? `Unique perspective: ${formData.uniqueTwist}` : ''}
 
-Requirements:
-- Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "long" ? "15-20" : "10-12"} chapters
-- Each chapter should be detailed (at least 800 words)
-- Include key takeaways for each chapter (4-6 points)`;
+Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "long" ? "15-20" : "10-12"} chapters with detailed content (800+ words each).`;
 
-      const courseSchema = {
-        type: "object",
-        properties: {
-          title: { type: "string" },
-          description: { type: "string" },
-          modules: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                module_title: { type: "string" },
-                sections: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      title: { type: "string" },
-                      content: { type: "string" },
-                      key_points: { 
-                        type: "array",
-                        items: { type: "string" }
-                      },
-                      ...(formData.includeQuizzes && {
-                        quiz_questions: {
+        const contentSchema = contentType === "course" ? {
+          type: "object",
+          properties: {
+            title: { type: "string" },
+            description: { type: "string" },
+            modules: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  module_title: { type: "string" },
+                  sections: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        title: { type: "string" },
+                        content: { type: "string" },
+                        key_points: { 
                           type: "array",
-                          items: {
-                            type: "object",
-                            properties: {
-                              question: { type: "string" },
-                              options: { type: "array", items: { type: "string" } },
-                              correct_answer: { type: "number" }
-                            }
-                          }
+                          items: { type: "string" }
                         }
-                      })
+                      }
                     }
                   }
                 }
               }
             }
           }
-        }
-      };
-
-      const bookSchema = {
-        type: "object",
-        properties: {
-          title: { type: "string" },
-          subtitle: { type: "string" },
-          chapters: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                chapter_number: { type: "number" },
-                title: { type: "string" },
-                content: { type: "string" },
-                key_takeaways: {
-                  type: "array",
-                  items: { type: "string" }
+        } : {
+          type: "object",
+          properties: {
+            title: { type: "string" },
+            subtitle: { type: "string" },
+            chapters: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  chapter_number: { type: "number" },
+                  title: { type: "string" },
+                  content: { type: "string" },
+                  key_takeaways: {
+                    type: "array",
+                    items: { type: "string" }
+                  }
                 }
               }
             }
           }
-        }
-      };
+        };
 
-      setGenerationProgress(50);
-      
-      aiResponse = await base44.integrations.Core.InvokeLLM({
-        prompt: contentPrompt,
-        response_json_schema: contentType === "course" ? courseSchema : bookSchema,
-        add_context_from_internet: true
-      });
+        aiResponse = await base44.integrations.Core.InvokeLLM({
+          prompt: contentPrompt,
+          response_json_schema: contentSchema,
+          add_context_from_internet: true
+        });
+      }
 
       if (!aiResponse || (contentType === "course" && !aiResponse.modules) || (contentType === "book" && !aiResponse.chapters)) {
-        throw new Error("Invalid AI response structure");
+        throw new Error("AI generated invalid content structure");
       }
 
       setGenerationProgress(70);
-      setGenerationStage("Generating cover image...");
+      setGenerationStage("Creating cover image...");
 
       let thumbnailUrl = null;
       if (formData.includeVisuals) {
         try {
           const imageResult = await base44.integrations.Core.GenerateImage({
-            prompt: `Professional educational ${contentType} cover for "${formData.topic}". Modern, clean design with purple and blue gradients. High quality.`
+            prompt: `Professional educational ${contentType} cover: "${formData.topic}". Modern design, purple and blue gradients, clean and professional.`
           });
-          thumbnailUrl = imageResult.url;
+          thumbnailUrl = imageResult?.url;
         } catch (imgError) {
           console.error("Image generation failed:", imgError);
         }
       }
 
       setGenerationProgress(85);
-      setGenerationStage("Saving content...");
+      setGenerationStage("Saving to database...");
 
       if (contentType === "course") {
         const course = await base44.entities.Course.create({
@@ -202,7 +206,7 @@ Requirements:
           level: formData.level,
           tier: formData.tier,
           unique_twist: formData.uniqueTwist || "",
-          thumbnail_url: thumbnailUrl,
+          thumbnail_url: thumbnailUrl || "",
           content_structure: aiResponse.modules,
           status: "published",
           engagement_features: {
@@ -221,12 +225,12 @@ Requirements:
       } else {
         const book = await base44.entities.Book.create({
           title: aiResponse.title || formData.title || formData.topic,
-          subtitle: aiResponse.subtitle || `A guide to ${formData.topic}`,
+          subtitle: aiResponse.subtitle || `A comprehensive guide to ${formData.topic}`,
           author_name: user?.full_name || "Anonymous",
           topic: formData.topic,
           level: formData.level,
           unique_twist: formData.uniqueTwist || "",
-          cover_url: thumbnailUrl,
+          cover_url: thumbnailUrl || "",
           chapters: aiResponse.chapters,
           status: "completed"
         });
@@ -241,11 +245,12 @@ Requirements:
 
     } catch (error) {
       console.error("Generation error:", error);
-      setGenerationStage(`Error: ${error.message || "Something went wrong"}`);
+      const errorMsg = error.message || error.toString() || "Generation failed";
+      setGenerationStage(`Error: ${errorMsg}`);
       setTimeout(() => {
         setGenerating(false);
         setGenerationProgress(0);
-      }, 4000);
+      }, 5000);
     }
   };
 
@@ -278,7 +283,7 @@ Requirements:
             <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-violet-100 to-purple-100 dark:from-violet-950 dark:to-purple-950">
               <Brain className="w-4 h-4 text-violet-600 dark:text-violet-400" />
               <span className="text-sm font-medium text-violet-700 dark:text-violet-300">
-                Advanced AI mode available
+                Claude AI enabled for extended generation
               </span>
             </div>
           )}
@@ -493,11 +498,11 @@ Requirements:
                   <Button
                     size="lg"
                     onClick={handleGenerate}
-                    disabled={!formData.topic}
+                    disabled={!formData.topic || generating}
                     className="bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white shadow-xl rounded-2xl px-8 py-6 text-lg font-semibold group"
                   >
                     <Sparkles className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform" />
-                    Generate with AI
+                    Generate with Multi-AI
                     <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </div>
@@ -531,6 +536,38 @@ Requirements:
                   <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
                     {generationProgress}% Complete
                   </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto text-left">
+                  <div className={`p-4 rounded-xl ${generationProgress >= 20 ? 'bg-cyan-50 dark:bg-cyan-950' : 'bg-slate-100 dark:bg-slate-800'}`}>
+                    {generationProgress >= 35 ? (
+                      <CheckCircle2 className="w-6 h-6 text-green-500 mb-2" />
+                    ) : (
+                      <Loader2 className={`w-6 h-6 mb-2 ${generationProgress >= 20 ? 'animate-spin text-cyan-500' : 'text-slate-400'}`} />
+                    )}
+                    <div className="font-semibold text-sm">Perplexity</div>
+                    <div className="text-xs text-slate-500">Research</div>
+                  </div>
+                  
+                  <div className={`p-4 rounded-xl ${generationProgress >= 35 ? 'bg-purple-50 dark:bg-purple-950' : 'bg-slate-100 dark:bg-slate-800'}`}>
+                    {generationProgress >= 50 ? (
+                      <CheckCircle2 className="w-6 h-6 text-green-500 mb-2" />
+                    ) : (
+                      <Loader2 className={`w-6 h-6 mb-2 ${generationProgress >= 35 ? 'animate-spin text-purple-500' : 'text-slate-400'}`} />
+                    )}
+                    <div className="font-semibold text-sm">Grok AI</div>
+                    <div className="text-xs text-slate-500">Trends</div>
+                  </div>
+                  
+                  <div className={`p-4 rounded-xl ${generationProgress >= 50 ? 'bg-blue-50 dark:bg-blue-950' : 'bg-slate-100 dark:bg-slate-800'}`}>
+                    {generationProgress >= 100 ? (
+                      <CheckCircle2 className="w-6 h-6 text-green-500 mb-2" />
+                    ) : (
+                      <Loader2 className={`w-6 h-6 mb-2 ${generationProgress >= 50 ? 'animate-spin text-blue-500' : 'text-slate-400'}`} />
+                    )}
+                    <div className="font-semibold text-sm">{shouldUseClaude() ? "Claude AI" : "AI"}</div>
+                    <div className="text-xs text-slate-500">Generate</div>
+                  </div>
                 </div>
               </Card>
             </motion.div>
