@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { 
   Sparkles, BookOpen, GraduationCap, ArrowRight, Wand2,
-  Loader2, CheckCircle2, Image as ImageIcon, Zap
+  Loader2, CheckCircle2, Image as ImageIcon, Zap, Brain
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -23,7 +23,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Generate() {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1);
   const [contentType, setContentType] = useState("course");
   const [generating, setGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
@@ -46,6 +45,14 @@ export default function Generate() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  // Determine if we should use Claude for long-form content
+  const shouldUseClaude = () => {
+    return contentType === "book" || 
+           formData.targetLength === "long" || 
+           formData.level === "advanced" || 
+           formData.level === "phd";
+  };
+
   const handleGenerate = async () => {
     setGenerating(true);
     setGenerationProgress(10);
@@ -54,101 +61,125 @@ export default function Generate() {
     try {
       const user = await base44.auth.me();
       
-      // Stage 1: Create outline
       setGenerationProgress(20);
       setGenerationStage("Main AI analyzing topic...");
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       setGenerationProgress(35);
       setGenerationStage("Creative Agent injecting originality...");
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Stage 2: Generate content structure
       setGenerationProgress(50);
-      setGenerationStage("Building content structure...");
+      
+      let aiResponse;
+      
+      // Use Claude for long-form, advanced content
+      if (shouldUseClaude()) {
+        setGenerationStage("Claude AI generating in-depth content...");
+        
+        const claudeResult = await base44.functions.invoke('generateWithClaude', {
+          contentType,
+          topic: formData.topic,
+          title: formData.title,
+          level: formData.level,
+          uniqueTwist: formData.uniqueTwist,
+          targetLength: formData.targetLength,
+          audience: formData.audience,
+          includeQuizzes: formData.includeQuizzes
+        });
 
-      const contentPrompt = contentType === "course" 
-        ? `Create a comprehensive ${formData.level}-level course on "${formData.topic}". 
-           Title: ${formData.title || formData.topic}
-           Unique angle: ${formData.uniqueTwist || "engaging and practical approach"}
-           Target audience: ${formData.audience || "general learners"}
-           Include: ${formData.targetLength === "short" ? "3-4" : formData.targetLength === "medium" ? "5-7" : "8-12"} modules.
-           Each module should have 2-3 sections with clear learning objectives.
-           Make it ${formData.level === "phd" ? "research-intensive with citations" : formData.level === "advanced" ? "technically deep" : "easy to understand"}.`
-        : `Write a ${formData.level}-level book on "${formData.topic}".
-           Title: ${formData.title || formData.topic}
-           Unique perspective: ${formData.uniqueTwist || "fresh and engaging"}
-           Length: ${formData.targetLength === "short" ? "5-8" : formData.targetLength === "medium" ? "10-15" : "15-25"} chapters.
-           Style: ${formData.level === "phd" ? "academic research paper" : formData.level === "advanced" ? "technical guide" : "accessible and engaging"}.`;
+        if (!claudeResult.data.success) {
+          throw new Error(claudeResult.data.error || 'Claude generation failed');
+        }
 
-      const contentSchema = contentType === "course" ? {
-        type: "object",
-        properties: {
-          title: { type: "string" },
-          description: { type: "string" },
-          modules: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                module_title: { type: "string" },
-                sections: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      title: { type: "string" },
-                      content: { type: "string" },
-                      key_points: { 
-                        type: "array",
-                        items: { type: "string" }
-                      },
-                      quiz_questions: formData.includeQuizzes ? {
-                        type: "array",
-                        items: {
-                          type: "object",
-                          properties: {
-                            question: { type: "string" },
-                            options: { type: "array", items: { type: "string" } },
-                            correct_answer: { type: "number" }
+        aiResponse = claudeResult.data.data;
+      } else {
+        // Use standard LLM for shorter, basic content
+        setGenerationStage("Building content structure...");
+
+        const contentPrompt = contentType === "course" 
+          ? `Create a comprehensive ${formData.level}-level course on "${formData.topic}". 
+             Title: ${formData.title || formData.topic}
+             Unique angle: ${formData.uniqueTwist || "engaging and practical approach"}
+             Target audience: ${formData.audience || "general learners"}
+             Include: ${formData.targetLength === "short" ? "3-4" : "5-7"} modules.
+             Each module should have 2-3 sections with clear learning objectives.
+             Make it ${formData.level === "phd" ? "research-intensive with citations" : formData.level === "advanced" ? "technically deep" : "easy to understand"}.`
+          : `Write a ${formData.level}-level book on "${formData.topic}".
+             Title: ${formData.title || formData.topic}
+             Unique perspective: ${formData.uniqueTwist || "fresh and engaging"}
+             Length: ${formData.targetLength === "short" ? "5-8" : "10-15"} chapters.
+             Style: ${formData.level === "phd" ? "academic research paper" : formData.level === "advanced" ? "technical guide" : "accessible and engaging"}.`;
+
+        const contentSchema = contentType === "course" ? {
+          type: "object",
+          properties: {
+            title: { type: "string" },
+            description: { type: "string" },
+            modules: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  module_title: { type: "string" },
+                  sections: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        title: { type: "string" },
+                        content: { type: "string" },
+                        key_points: { 
+                          type: "array",
+                          items: { type: "string" }
+                        },
+                        quiz_questions: formData.includeQuizzes ? {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              question: { type: "string" },
+                              options: { type: "array", items: { type: "string" } },
+                              correct_answer: { type: "number" }
+                            }
                           }
-                        }
-                      } : undefined
+                        } : undefined
+                      }
                     }
                   }
                 }
               }
             }
           }
-        }
-      } : {
-        type: "object",
-        properties: {
-          title: { type: "string" },
-          subtitle: { type: "string" },
-          chapters: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                chapter_number: { type: "number" },
-                title: { type: "string" },
-                content: { type: "string" },
-                key_takeaways: {
-                  type: "array",
-                  items: { type: "string" }
+        } : {
+          type: "object",
+          properties: {
+            title: { type: "string" },
+            subtitle: { type: "string" },
+            chapters: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  chapter_number: { type: "number" },
+                  title: { type: "string" },
+                  content: { type: "string" },
+                  key_takeaways: {
+                    type: "array",
+                    items: { type: "string" }
+                  }
                 }
               }
             }
           }
-        }
-      };
+        };
 
-      const aiResponse = await base44.integrations.Core.InvokeLLM({
-        prompt: contentPrompt,
-        response_json_schema: contentSchema,
-        add_context_from_internet: true
-      });
+        aiResponse = await base44.integrations.Core.InvokeLLM({
+          prompt: contentPrompt,
+          response_json_schema: contentSchema,
+          add_context_from_internet: true
+        });
+      }
 
       setGenerationProgress(70);
       setGenerationStage("Generating visuals...");
@@ -253,6 +284,15 @@ export default function Generate() {
           <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
             Powered by dual AI collaboration—Main AI for precision, Creative Agent for originality
           </p>
+
+          {shouldUseClaude() && (
+            <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-violet-100 to-purple-100 dark:from-violet-950 dark:to-purple-950">
+              <Brain className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+              <span className="text-sm font-medium text-violet-700 dark:text-violet-300">
+                Claude AI enabled for extended content generation
+              </span>
+            </div>
+          )}
         </motion.div>
 
         <AnimatePresence mode="wait">
@@ -413,6 +453,11 @@ export default function Generate() {
                           <div className="text-xs text-slate-500 mt-1">
                             {length === "short" ? "3-5 sections" : length === "medium" ? "5-10 sections" : "10+ sections"}
                           </div>
+                          {length === "long" && (
+                            <div className="text-xs text-violet-600 dark:text-violet-400 mt-1 font-semibold">
+                              Uses Claude AI
+                            </div>
+                          )}
                         </button>
                       ))}
                     </div>
@@ -519,8 +564,12 @@ export default function Generate() {
                     ) : (
                       <Loader2 className={`w-6 h-6 mb-2 ${generationProgress >= 35 ? 'animate-spin text-blue-500' : 'text-slate-400'}`} />
                     )}
-                    <div className="font-semibold text-sm">Creative Agent</div>
-                    <div className="text-xs text-slate-500">Adding originality</div>
+                    <div className="font-semibold text-sm">
+                      {shouldUseClaude() ? "Claude AI" : "Creative Agent"}
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      {shouldUseClaude() ? "Extended context" : "Adding originality"}
+                    </div>
                   </div>
                   
                   <div className={`p-4 rounded-xl ${generationProgress >= 70 ? 'bg-emerald-50 dark:bg-emerald-950' : 'bg-slate-100 dark:bg-slate-800'}`}>
