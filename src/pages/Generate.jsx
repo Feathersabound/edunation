@@ -46,7 +46,8 @@ export default function Generate() {
     audience: "",
     language: "en-US",
     adultContent: false,
-    britishHumor: false
+    britishHumor: false,
+    aiModel: "claude"
   });
 
   useEffect(() => {
@@ -65,36 +66,20 @@ export default function Generate() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const shouldUseClaude = () => {
-    return contentType === "book" || 
-           formData.targetLength === "long" || 
-           formData.level === "advanced" || 
-           formData.level === "phd";
-  };
-
   const handleGenerate = async () => {
     setGenerating(true);
     setGenerationProgress(10);
-    setGenerationStage("Initializing Multi-AI System...");
+    setGenerationStage("Initializing AI...");
 
     try {
       const user = await base44.auth.me();
       
-      setGenerationProgress(20);
-      setGenerationStage("Perplexity researching topic...");
-      await new Promise(resolve => setTimeout(resolve, 800));
+      setGenerationProgress(30);
+      setGenerationStage(`${formData.aiModel === 'claude' ? 'Claude' : 'Base AI'} generating content...`);
 
-      setGenerationProgress(35);
-      setGenerationStage("Grok analyzing trends...");
-      await new Promise(resolve => setTimeout(resolve, 800));
-
-      setGenerationProgress(50);
-      
       let aiResponse;
-      
-      if (shouldUseClaude()) {
-        setGenerationStage("Claude AI generating content...");
-        
+
+      if (formData.aiModel === 'claude') {
         const claudeResult = await base44.functions.invoke('generateWithClaude', {
           contentType,
           topic: formData.topic,
@@ -109,16 +94,12 @@ export default function Generate() {
           britishHumor: formData.britishHumor
         });
 
-        console.log("Claude result:", claudeResult);
-
         if (!claudeResult.data || !claudeResult.data.success) {
           throw new Error(claudeResult.data?.error || 'Claude generation failed');
         }
 
         aiResponse = claudeResult.data.data;
       } else {
-        setGenerationStage("AI generating content...");
-
         const languageName = formData.language === "en-US" ? "US English" : 
                             formData.language === "en-GB" ? "UK English" : formData.language;
 
@@ -196,14 +177,11 @@ Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "
         aiResponse = await base44.integrations.Core.InvokeLLM({
           prompt: contentPrompt,
           response_json_schema: contentSchema,
-          add_context_from_internet: true
+          add_context_from_internet: false
         });
       }
 
-      console.log("AI Response:", aiResponse);
-
       if (!aiResponse || (contentType === "course" && !aiResponse.modules) || (contentType === "book" && !aiResponse.chapters)) {
-        console.error("Invalid AI response structure:", aiResponse);
         throw new Error("AI generated invalid content structure");
       }
 
@@ -244,9 +222,7 @@ Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "
           }
         };
 
-        console.log("Creating course with data:", courseData);
         const course = await base44.entities.Course.create(courseData);
-        console.log("Course created:", course);
 
         setGenerationProgress(100);
         setGenerationStage("Complete! 🎉");
@@ -270,9 +246,7 @@ Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "
           estimated_pages: Math.ceil((aiResponse.chapters?.reduce((sum, ch) => sum + (ch.content?.length || 0), 0) || 0) / 2000)
         };
 
-        console.log("Creating book with data:", bookData);
         const book = await base44.entities.Book.create(bookData);
-        console.log("Book created:", book);
 
         setGenerationProgress(100);
         setGenerationStage("Complete! 🎉");
@@ -305,7 +279,7 @@ Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-100 to-blue-100 dark:from-purple-950 dark:to-blue-950 mb-6">
             <Wand2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
             <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
-              Perplexity + Grok + Claude Multi-AI Studio
+              AI-Powered Content Studio
             </span>
           </div>
           
@@ -316,17 +290,8 @@ Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "
           </h1>
           
           <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-            Research-verified with Perplexity + Creative with Grok + Refined by Claude
+            Choose your AI model and generate professional content
           </p>
-
-          {shouldUseClaude() && (
-            <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-violet-100 to-purple-100 dark:from-violet-950 dark:to-purple-950">
-              <Brain className="w-4 h-4 text-violet-600 dark:text-violet-400" />
-              <span className="text-sm font-medium text-violet-700 dark:text-violet-300">
-                Claude AI enabled for extended generation
-              </span>
-            </div>
-          )}
         </motion.div>
 
         <AnimatePresence mode="wait">
@@ -364,6 +329,21 @@ Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "
                 </Tabs>
 
                 <div className="space-y-6 mt-8">
+                  <div>
+                    <Label htmlFor="aiModel" className="text-base font-semibold mb-2">
+                      AI Model
+                    </Label>
+                    <Select value={formData.aiModel} onValueChange={(val) => updateFormData("aiModel", val)}>
+                      <SelectTrigger className="h-12">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="claude">Claude AI - Advanced (Recommended)</SelectItem>
+                        <SelectItem value="base">Base AI - Fast & Free</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <div>
                     <Label htmlFor="topic" className="text-base font-semibold mb-2">
                       Topic *
@@ -570,7 +550,7 @@ Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "
                     className="bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white shadow-xl rounded-2xl px-8 py-6 text-lg font-semibold group"
                   >
                     <Sparkles className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform" />
-                    Generate with Multi-AI
+                    Generate with AI
                     <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </div>
@@ -604,38 +584,6 @@ Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "
                   <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
                     {generationProgress}% Complete
                   </p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto text-left">
-                  <div className={`p-4 rounded-xl ${generationProgress >= 20 ? 'bg-cyan-50 dark:bg-cyan-950' : 'bg-slate-100 dark:bg-slate-800'}`}>
-                    {generationProgress >= 35 ? (
-                      <CheckCircle2 className="w-6 h-6 text-green-500 mb-2" />
-                    ) : (
-                      <Loader2 className={`w-6 h-6 mb-2 ${generationProgress >= 20 ? 'animate-spin text-cyan-500' : 'text-slate-400'}`} />
-                    )}
-                    <div className="font-semibold text-sm">Perplexity</div>
-                    <div className="text-xs text-slate-500">Research</div>
-                  </div>
-                  
-                  <div className={`p-4 rounded-xl ${generationProgress >= 35 ? 'bg-purple-50 dark:bg-purple-950' : 'bg-slate-100 dark:bg-slate-800'}`}>
-                    {generationProgress >= 50 ? (
-                      <CheckCircle2 className="w-6 h-6 text-green-500 mb-2" />
-                    ) : (
-                      <Loader2 className={`w-6 h-6 mb-2 ${generationProgress >= 35 ? 'animate-spin text-purple-500' : 'text-slate-400'}`} />
-                    )}
-                    <div className="font-semibold text-sm">Grok AI</div>
-                    <div className="text-xs text-slate-500">Trends</div>
-                  </div>
-                  
-                  <div className={`p-4 rounded-xl ${generationProgress >= 50 ? 'bg-blue-50 dark:bg-blue-950' : 'bg-slate-100 dark:bg-slate-800'}`}>
-                    {generationProgress >= 100 ? (
-                      <CheckCircle2 className="w-6 h-6 text-green-500 mb-2" />
-                    ) : (
-                      <Loader2 className={`w-6 h-6 mb-2 ${generationProgress >= 50 ? 'animate-spin text-blue-500' : 'text-slate-400'}`} />
-                    )}
-                    <div className="font-semibold text-sm">{shouldUseClaude() ? "Claude AI" : "AI"}</div>
-                    <div className="text-xs text-slate-500">Generate</div>
-                  </div>
                 </div>
               </Card>
             </motion.div>
