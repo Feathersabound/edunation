@@ -29,29 +29,27 @@ Deno.serve(async (req) => {
         }
 
         // Construct the prompt for Grok
-        const systemPrompt = `You are CreativeSpark, a witty AI brainstorming assistant. You specialize in generating unique, engaging angles for educational content. Be creative, bold, and inject personality while maintaining educational value.`;
+        const systemPrompt = `You are a witty AI brainstorming assistant. Generate creative angles for educational content. Return ONLY valid JSON, no other text or markdown.`;
 
         const userPrompt = `Brainstorm creative angles for a ${contentType} on "${topic}" at ${level} level.
 
-${currentAngles ? `Current ideas to build upon: ${currentAngles}` : ''}
+Generate 5 unique angles with brief descriptions.
 
-Generate:
-1. **5 Unique Angles**: Unconventional approaches, creative metaphors, or unexpected connections
-2. **Witty Hooks**: Attention-grabbing opening lines or taglines
-3. **Creative Formats**: Innovative ways to present the content (storytelling, gamification, etc.)
-4. **Engagement Ideas**: Interactive elements, challenges, or viral-worthy concepts
-${includeRealTimeData ? '5. **Real-Time Context**: Current trends, news, or cultural references related to this topic' : ''}
-
-Be specific, actionable, and inject personality. Make learning unforgettable!
-
-Return as JSON:
+Return ONLY this JSON structure:
 {
-    "unique_angles": [{"angle": "description", "why_it_works": "reason"}],
+    "unique_angles": [
+        {"angle": "description here", "why_it_works": "brief reason"},
+        {"angle": "description here", "why_it_works": "brief reason"},
+        {"angle": "description here", "why_it_works": "brief reason"},
+        {"angle": "description here", "why_it_works": "brief reason"},
+        {"angle": "description here", "why_it_works": "brief reason"}
+    ],
     "witty_hooks": ["hook1", "hook2", "hook3"],
-    "creative_formats": [{"format": "name", "description": "how it works"}],
-    "engagement_ideas": [{"idea": "concept", "implementation": "how to do it"}],
-    "real_time_context": {"trends": ["trend1", "trend2"], "cultural_references": ["ref1", "ref2"], "current_discussions": "summary"}
+    "creative_formats": [{"format": "format name", "description": "brief description"}],
+    "real_time_context": {"trends": ["trend1", "trend2"], "cultural_references": ["ref1"], "current_discussions": "summary"}
 }`;
+
+        console.log("Calling Grok API...");
 
         // Call Grok API
         const grokResponse = await fetch(GROK_API_URL, {
@@ -72,42 +70,53 @@ Return as JSON:
                         content: userPrompt
                     }
                 ],
-                temperature: 0.9,
-                max_tokens: 4000
+                temperature: 0.8,
+                max_tokens: 2000
             })
         });
 
         if (!grokResponse.ok) {
             const errorText = await grokResponse.text();
+            console.error("Grok API error:", errorText);
             throw new Error(`Grok API error: ${grokResponse.status} - ${errorText}`);
         }
 
         const grokData = await grokResponse.json();
+        console.log("Grok response received");
+        
         const grokText = grokData.choices[0].message.content;
+        console.log("Grok response text:", grokText.substring(0, 200));
 
         // Parse JSON from Grok's response
         let brainstormResults;
         try {
-            const jsonMatch = grokText.match(/\{[\s\S]*\}/);
+            // Remove markdown code blocks if present
+            let cleanedText = grokText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+            
+            // Try to find JSON in the response
+            const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
                 brainstormResults = JSON.parse(jsonMatch[0]);
+                console.log("Successfully parsed JSON from Grok");
             } else {
-                // If JSON parsing fails, return raw text
-                brainstormResults = {
-                    raw_response: grokText,
-                    unique_angles: [],
-                    witty_hooks: [],
-                    creative_formats: [],
-                    engagement_ideas: []
-                };
+                throw new Error("No JSON found in response");
             }
         } catch (parseError) {
+            console.error("JSON parse error:", parseError);
+            console.error("Failed text:", grokText);
+            
+            // Fallback: return raw text
             brainstormResults = {
                 raw_response: grokText,
-                unique_angles: [],
-                witty_hooks: [],
+                unique_angles: [
+                    {
+                        angle: "Creative angle extraction failed - using fallback",
+                        why_it_works: "Grok returned invalid JSON format"
+                    }
+                ],
+                witty_hooks: [grokText.substring(0, 100)],
                 creative_formats: [],
-                engagement_ideas: []
+                real_time_context: {}
             };
         }
 
@@ -123,6 +132,7 @@ Return as JSON:
     } catch (error) {
         console.error('Grok brainstorm error:', error);
         return Response.json({ 
+            success: false,
             error: error.message,
             details: error.toString()
         }, { status: 500 });
