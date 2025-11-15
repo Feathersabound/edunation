@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -37,7 +38,21 @@ export default function MyBooks() {
   });
 
   const deleteBookMutation = useMutation({
-    mutationFn: (bookId) => base44.entities.Book.delete(bookId),
+    mutationFn: async (bookId) => {
+      // Fetch all books to ensure the specific book exists before attempting to delete
+      // This is a workaround for potential eventual consistency issues or if `delete` operation
+      // requires additional checks based on other book properties.
+      // In a more robust API, a direct delete by ID would be sufficient.
+      const allBooks = await base44.entities.Book.list();
+      const book = allBooks.find(b => b.id === bookId);
+      if (book) {
+        await base44.entities.Book.delete(bookId);
+      } else {
+        // Optionally handle case where book is not found
+        console.warn(`Attempted to delete book with ID ${bookId}, but it was not found.`);
+        throw new Error("Book not found or already deleted.");
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries(['books']);
     },

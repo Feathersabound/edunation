@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -39,8 +40,8 @@ export default function BookView() {
   const { data: book, isLoading } = useQuery({
     queryKey: ['book', bookId],
     queryFn: async () => {
-      const books = await base44.entities.Book.filter({ id: bookId });
-      return books[0];
+      const allBooks = await base44.entities.Book.list();
+      return allBooks.find(b => b.id === bookId);
     },
     enabled: !!bookId,
   });
