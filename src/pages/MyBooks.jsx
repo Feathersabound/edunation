@@ -55,10 +55,7 @@ export default function MyBooks() {
   };
 
   const myBooks = books.filter(b => 
-    b.created_by === user?.email && 
-    b.chapters && 
-    b.chapters.length > 0 &&
-    b.title
+    b.created_by === user?.email && b.title
   );
 
   const showAdultContent = user?.show_adult_content || false;
@@ -186,7 +183,7 @@ export default function MyBooks() {
                 >
                   <div 
                     className="aspect-[3/4] bg-gradient-to-br from-blue-400 via-cyan-500 to-teal-500 relative overflow-hidden cursor-pointer"
-                    onClick={() => navigate(`${createPageUrl("BookView")}?id=${book.id}`)}
+                    onClick={() => navigate(book.chapters?.length > 0 ? `${createPageUrl("BookView")}?id=${book.id}` : `${createPageUrl("BookAuthor")}?id=${book.id}`)}
                   >
                     {book.cover_url ? (
                       <img 
@@ -212,7 +209,7 @@ export default function MyBooks() {
                         book.status === 'generating' ? 'bg-amber-500' :
                         'bg-slate-500'
                       } text-white`}>
-                        {book.status}
+                        {book.status || 'draft'}
                       </Badge>
                       {book.adult_content && (
                         <Badge className="bg-red-500 text-white">
@@ -223,9 +220,11 @@ export default function MyBooks() {
                   </div>
 
                   <div className="p-4 flex-1 flex flex-col">
-                    <Badge className={`${levelColors[book.level]} mb-3 w-fit`}>
-                      {book.level}
-                    </Badge>
+                    {book.level && (
+                      <Badge className={`${levelColors[book.level]} mb-3 w-fit`}>
+                        {book.level}
+                      </Badge>
+                    )}
 
                     <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2 line-clamp-2">
                       {book.title}
@@ -245,21 +244,25 @@ export default function MyBooks() {
                   </div>
 
                   <div className="px-4 pb-4 flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      className="flex-1" 
-                      size="sm"
-                      onClick={() => navigate(`${createPageUrl("BookView")}?id=${book.id}`)}
-                    >
-                      <Eye className="w-4 h-4 mr-1" />
-                      Read
-                    </Button>
+                    {book.chapters?.length > 0 ? (
+                      <Button 
+                        variant="outline" 
+                        className="flex-1" 
+                        size="sm"
+                        onClick={() => navigate(`${createPageUrl("BookView")}?id=${book.id}`)}
+                      >
+                        <Eye className="w-4 h-4 mr-1" />
+                        Read
+                      </Button>
+                    ) : null}
                     <Button 
                       variant="outline" 
                       size="sm"
                       onClick={() => navigate(`${createPageUrl("BookAuthor")}?id=${book.id}`)}
+                      className={book.chapters?.length > 0 ? "" : "flex-1"}
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Pencil className="w-4 h-4 mr-1" />
+                      {book.chapters?.length > 0 ? "" : "Edit"}
                     </Button>
                     <Button 
                       variant="outline" 
