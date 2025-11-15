@@ -4,12 +4,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { 
-  BookOpen, Plus, Search, FileText, Eye, Pencil, Trash2
+  BookOpen, Plus, Search, FileText, Eye, Pencil, Trash2, Filter, SlidersHorizontal
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 
@@ -18,6 +19,8 @@ export default function MyBooks() {
   const queryClient = useQueryClient();
   const [user, setUser] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [levelFilter, setLevelFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
     const loadUser = async () => {
@@ -56,19 +59,18 @@ export default function MyBooks() {
     }
   };
 
-  // Show all books created by current user
-  const myBooks = books.filter(b => 
-    b.created_by === user?.email
-  );
-
+  const myBooks = books.filter(b => b.created_by === user?.email);
   const showAdultContent = user?.show_adult_content || false;
   
   const filteredBooks = myBooks
     .filter(book => !book.adult_content || showAdultContent)
     .filter(book => 
-      book.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      book.topic?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+      (book.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      book.topic?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      book.subtitle?.toLowerCase().includes(searchQuery.toLowerCase()))
+    )
+    .filter(book => levelFilter === "all" || book.level === levelFilter)
+    .filter(book => statusFilter === "all" || book.status === statusFilter);
 
   const levelColors = {
     beginner: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
@@ -123,14 +125,41 @@ export default function MyBooks() {
           transition={{ delay: 0.1 }}
         >
           <Card className="glass-effect border-0 p-6 mb-8">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-              <Input
-                placeholder="Search books..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-12"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+                <Input
+                  placeholder="Search books..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 h-12"
+                />
+              </div>
+              
+              <Select value={levelFilter} onValueChange={setLevelFilter}>
+                <SelectTrigger className="h-12">
+                  <SelectValue placeholder="All Levels" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Levels</SelectItem>
+                  <SelectItem value="beginner">Beginner</SelectItem>
+                  <SelectItem value="intermediate">Intermediate</SelectItem>
+                  <SelectItem value="advanced">Advanced</SelectItem>
+                  <SelectItem value="phd">PhD</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="h-12">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="published">Published</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </Card>
         </motion.div>
@@ -156,20 +185,22 @@ export default function MyBooks() {
                 <BookOpen className="w-10 h-10 text-white" />
               </div>
               <h3 className="text-2xl font-bold mb-4 text-slate-800 dark:text-slate-200">
-                No books yet
+                {myBooks.length > 0 ? "No books match your filters" : "No books yet"}
               </h3>
               <p className="text-slate-600 dark:text-slate-400 mb-8">
-                Write your first book with the power of AI
+                {myBooks.length > 0 ? "Try adjusting your search or filters" : "Write your first book with the power of AI"}
               </p>
-              <Link to={createPageUrl("Generate")}>
-                <Button 
-                  size="lg"
-                  className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white rounded-2xl"
-                >
-                  <Plus className="w-5 h-5 mr-2" />
-                  Write Your First Book
-                </Button>
-              </Link>
+              {myBooks.length === 0 && (
+                <Link to={createPageUrl("Generate")}>
+                  <Button 
+                    size="lg"
+                    className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white rounded-2xl"
+                  >
+                    <Plus className="w-5 h-5 mr-2" />
+                    Write Your First Book
+                  </Button>
+                </Link>
+              )}
             </Card>
           </motion.div>
         ) : (
@@ -247,7 +278,7 @@ export default function MyBooks() {
                   </div>
 
                   <div className="px-4 pb-4 flex gap-2">
-                    {book.chapters?.length > 0 ? (
+                    {book.chapters?.length > 0 && (
                       <Button 
                         variant="outline" 
                         className="flex-1" 
@@ -257,7 +288,7 @@ export default function MyBooks() {
                         <Eye className="w-4 h-4 mr-1" />
                         Read
                       </Button>
-                    ) : null}
+                    )}
                     <Button 
                       variant="outline" 
                       size="sm"
@@ -270,7 +301,10 @@ export default function MyBooks() {
                     <Button 
                       variant="outline" 
                       size="sm"
-                      onClick={() => handleDelete(book.id, book.title)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(book.id, book.title);
+                      }}
                       className="text-red-500 hover:bg-red-50 dark:hover:bg-red-950"
                     >
                       <Trash2 className="w-4 h-4" />

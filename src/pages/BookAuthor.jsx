@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -15,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import EnhancedImageGenerator from "../components/EnhancedImageGenerator";
+import BookCoverGenerator from "../components/BookCoverGenerator";
 
 export default function BookAuthor() {
   const navigate = useNavigate();
@@ -28,11 +30,13 @@ export default function BookAuthor() {
     topic: "",
     level: "beginner",
     adult_content: false,
+    cover_url: "", // Added cover_url to state
     chapters: []
   });
   const [saving, setSaving] = useState(false);
   const [enhancingChapter, setEnhancingChapter] = useState(null);
   const [showImageGenerator, setShowImageGenerator] = useState(false);
+  const [showCoverGenerator, setShowCoverGenerator] = useState(false); // Added showCoverGenerator state
   const [currentChapterForImage, setCurrentChapterForImage] = useState(null);
   const [exporting, setExporting] = useState(false);
 
@@ -54,6 +58,7 @@ export default function BookAuthor() {
         topic: existingBook.topic || "",
         level: existingBook.level || "beginner",
         adult_content: existingBook.adult_content || false,
+        cover_url: existingBook.cover_url || "", // Set cover_url from existing book
         chapters: existingBook.chapters || []
       });
     }
@@ -155,9 +160,10 @@ export default function BookAuthor() {
         topic: book.topic,
         level: book.level,
         adult_content: book.adult_content,
+        cover_url: book.cover_url || "", // Added cover_url to bookData
         chapters: book.chapters || [],
         author_name: user?.full_name || "Anonymous",
-        status: "draft",
+        status: (book.chapters || []).length > 0 ? "completed" : "draft", // Updated status logic
         word_count: (book.chapters || []).reduce((sum, ch) => sum + (ch.content?.length || 0), 0),
         estimated_pages: Math.ceil(((book.chapters || []).reduce((sum, ch) => sum + (ch.content?.length || 0), 0)) / 2000)
       };
@@ -270,6 +276,26 @@ export default function BookAuthor() {
         </div>
 
         <Card className="glass-effect border-0 p-8 mb-6">
+          <div className="mb-6">
+            <Label>Book Cover</Label>
+            <div className="mt-2 flex gap-4">
+              {book.cover_url && (
+                <img 
+                  src={book.cover_url} 
+                  alt="Book cover"
+                  className="w-32 h-40 object-cover rounded-lg"
+                />
+              )}
+              <Button
+                variant="outline"
+                onClick={() => setShowCoverGenerator(true)}
+              >
+                <ImageIcon className="w-4 h-4 mr-2" />
+                {book.cover_url ? "Change Cover" : "Generate Cover"}
+              </Button>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
               <Label>Book Title *</Label>
@@ -439,6 +465,14 @@ export default function BookAuthor() {
         onImageGenerated={handleImageGenerated}
         defaultPrompt={currentChapterForImage?.prompt || ""}
         adultContent={book.adult_content}
+      />
+
+      <BookCoverGenerator
+        open={showCoverGenerator}
+        onClose={() => setShowCoverGenerator(false)}
+        onCoverGenerated={(url) => setBook(prev => ({ ...prev, cover_url: url }))}
+        bookTitle={book.title}
+        bookTopic={book.topic}
       />
     </div>
   );

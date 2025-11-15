@@ -8,6 +8,7 @@ import Profile from './pages/Profile';
 import CourseAuthor from './pages/CourseAuthor';
 import BookAuthor from './pages/BookAuthor';
 import AdminDashboard from './pages/AdminDashboard';
+import Discover from './pages/Discover';
 import Layout from './Layout.jsx';
 
 
@@ -22,6 +23,7 @@ export const PAGES = {
     "CourseAuthor": CourseAuthor,
     "BookAuthor": BookAuthor,
     "AdminDashboard": AdminDashboard,
+    "Discover": Discover,
 }
 
 export const pagesConfig = {
