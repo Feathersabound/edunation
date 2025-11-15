@@ -22,10 +22,10 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'PERPLEXITY_API_KEY not configured' }, { status: 500 });
         }
 
-        // Updated to use current Perplexity models
+        // Use current Perplexity models as of 2024
         const model = researchDepth === "deep" 
-            ? "sonar-pro" 
-            : "sonar";
+            ? "llama-3.1-sonar-large-128k-online" 
+            : "llama-3.1-sonar-small-128k-online";
 
         const response = await fetch(PERPLEXITY_API_URL, {
             method: 'POST',
