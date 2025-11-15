@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -12,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 
 export default function MyBooks() {
   const navigate = useNavigate();
@@ -39,38 +39,26 @@ export default function MyBooks() {
 
   const deleteBookMutation = useMutation({
     mutationFn: async (bookId) => {
-      // Fetch all books to ensure the specific book exists before attempting to delete
-      // This is a workaround for potential eventual consistency issues or if `delete` operation
-      // requires additional checks based on other book properties.
-      // In a more robust API, a direct delete by ID would be sufficient.
-      const allBooks = await base44.entities.Book.list();
-      const book = allBooks.find(b => b.id === bookId);
-      if (book) {
-        await base44.entities.Book.delete(bookId);
-      } else {
-        // Optionally handle case where book is not found
-        console.warn(`Attempted to delete book with ID ${bookId}, but it was not found.`);
-        throw new Error("Book not found or already deleted.");
-      }
+      await base44.entities.Book.delete(bookId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['books']);
+      toast.success("Book deleted successfully");
     },
+    onError: (error) => {
+      toast.error("Failed to delete book");
+    }
   });
 
   const handleDelete = async (bookId, bookTitle) => {
     if (window.confirm(`Are you sure you want to delete "${bookTitle}"?`)) {
-      try {
-        await deleteBookMutation.mutateAsync(bookId);
-      } catch (error) {
-        console.error("Delete error:", error);
-        alert("Failed to delete book");
-      }
+      deleteBookMutation.mutate(bookId);
     }
   };
 
+  // Show all books created by current user
   const myBooks = books.filter(b => 
-    b.created_by === user?.email && b.title
+    b.created_by === user?.email
   );
 
   const showAdultContent = user?.show_adult_content || false;

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -40,6 +39,7 @@ export default function BookView() {
   const { data: book, isLoading } = useQuery({
     queryKey: ['book', bookId],
     queryFn: async () => {
+      if (!bookId) return null;
       const allBooks = await base44.entities.Book.list();
       return allBooks.find(b => b.id === bookId);
     },
@@ -161,7 +161,7 @@ export default function BookView() {
                       </div>
                       {book.chapters?.length > 0 && (
                         <span className="text-sm text-slate-500 dark:text-slate-400">
-                          {Math.ceil(chapter.content.length / 1000)} min read
+                          {Math.ceil((chapter.content?.length || 0) / 1000)} min read
                         </span>
                       )}
                     </div>
