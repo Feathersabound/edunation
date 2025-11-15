@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { useQueryClient } from "@tanstack/react-query";
 import { 
   Sparkles, BookOpen, GraduationCap, ArrowRight, Wand2,
   Loader2, Image as ImageIcon, Zap, Globe, Search, Laugh, Edit3
@@ -26,6 +28,7 @@ import AIContentEditor from "../components/AIContentEditor";
 
 export default function Generate() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [contentType, setContentType] = useState("course");
   const [generating, setGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
@@ -225,6 +228,7 @@ Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "
         };
 
         const course = await base44.entities.Course.create(courseData);
+        queryClient.invalidateQueries(['courses']);
 
         setGenerationProgress(100);
         setGenerationStage("Complete! 🎉");
@@ -241,20 +245,24 @@ Create ${formData.targetLength === "short" ? "6-8" : formData.targetLength === "
           level: formData.level,
           unique_twist: formData.uniqueTwist || "",
           cover_url: thumbnailUrl || "",
-          chapters: aiResponse.chapters,
+          chapters: aiResponse.chapters || [], // Ensure chapters is an array
           status: "completed",
           adult_content: formData.adultContent,
-          word_count: aiResponse.chapters?.reduce((sum, ch) => sum + (ch.content?.length || 0), 0) || 0,
-          estimated_pages: Math.ceil((aiResponse.chapters?.reduce((sum, ch) => sum + (ch.content?.length || 0), 0) || 0) / 2000)
+          word_count: (aiResponse.chapters || []).reduce((sum, ch) => sum + (ch.content?.length || 0), 0),
+          estimated_pages: Math.ceil(((aiResponse.chapters || []).reduce((sum, ch) => sum + (ch.content?.length || 0), 0) / 2000))
         };
 
+        console.log("Creating book with data:", bookData);
         const book = await base44.entities.Book.create(bookData);
+        console.log("Book created:", book);
+        
+        queryClient.invalidateQueries(['books']);
 
         setGenerationProgress(100);
         setGenerationStage("Complete! 🎉");
         
         setTimeout(() => {
-          navigate(`${createPageUrl("BookView")}?id=${book.id}`);
+          navigate(`${createPageUrl("MyBooks")}`);
         }, 1500);
       }
 
