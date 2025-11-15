@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { 
-  BookOpen, Plus, Search, FileText, Eye, Pencil, Trash2, Filter, SlidersHorizontal
+  BookOpen, Plus, Search, FileText, Eye, Pencil, Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -59,7 +59,8 @@ export default function MyBooks() {
     }
   };
 
-  const myBooks = books.filter(b => b.created_by === user?.email);
+  // FIX: Only filter when user is loaded
+  const myBooks = user ? books.filter(b => b.created_by === user.email) : [];
   const showAdultContent = user?.show_adult_content || false;
   
   const filteredBooks = myBooks
@@ -78,6 +79,9 @@ export default function MyBooks() {
     advanced: "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300",
     phd: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
   };
+
+  // Show loading while user or books are loading
+  const isActuallyLoading = isLoading || !user;
 
   return (
     <div className="min-h-screen py-12">
@@ -164,7 +168,7 @@ export default function MyBooks() {
           </Card>
         </motion.div>
 
-        {isLoading ? (
+        {isActuallyLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3].map((i) => (
               <Card key={i} className="glass-effect border-0 p-6 animate-pulse">
