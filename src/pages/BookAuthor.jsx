@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -14,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 import EnhancedImageGenerator from "../components/EnhancedImageGenerator";
 
 export default function BookAuthor() {
@@ -39,6 +39,7 @@ export default function BookAuthor() {
   const { data: existingBook, isLoading } = useQuery({
     queryKey: ['book', bookId],
     queryFn: async () => {
+      if (!bookId) return null;
       const allBooks = await base44.entities.Book.list();
       return allBooks.find(b => b.id === bookId);
     },
@@ -47,16 +48,23 @@ export default function BookAuthor() {
 
   useEffect(() => {
     if (existingBook) {
-      setBook(existingBook);
+      setBook({
+        title: existingBook.title || "",
+        subtitle: existingBook.subtitle || "",
+        topic: existingBook.topic || "",
+        level: existingBook.level || "beginner",
+        adult_content: existingBook.adult_content || false,
+        chapters: existingBook.chapters || []
+      });
     }
   }, [existingBook]);
 
   const addChapter = () => {
     setBook(prev => ({
       ...prev,
-      chapters: [...prev.chapters, {
-        chapter_number: prev.chapters.length + 1,
-        title: `Chapter ${prev.chapters.length + 1}`,
+      chapters: [...(prev.chapters || []), {
+        chapter_number: (prev.chapters?.length || 0) + 1,
+        title: `Chapter ${(prev.chapters?.length || 0) + 1}`,
         content: "",
         key_takeaways: [],
         images: []
@@ -65,13 +73,13 @@ export default function BookAuthor() {
   };
 
   const updateChapter = (index, field, value) => {
-    const newChapters = [...book.chapters];
+    const newChapters = [...(book.chapters || [])];
     newChapters[index][field] = value;
     setBook(prev => ({ ...prev, chapters: newChapters }));
   };
 
   const deleteChapter = (index) => {
-    const newChapters = book.chapters.filter((_, i) => i !== index);
+    const newChapters = (book.chapters || []).filter((_, i) => i !== index);
     newChapters.forEach((ch, i) => ch.chapter_number = i + 1);
     setBook(prev => ({ ...prev, chapters: newChapters }));
   };
@@ -96,12 +104,13 @@ export default function BookAuthor() {
         const enhancedChapter = response.data.data.chapters[0];
         updateChapter(index, "content", enhancedChapter.content);
         updateChapter(index, "key_takeaways", enhancedChapter.key_takeaways || []);
+        toast.success("Chapter enhanced successfully!");
       } else {
         throw new Error("Invalid AI response");
       }
     } catch (error) {
       console.error("AI enhancement error:", error);
-      alert("Failed to enhance with AI: " + error.message);
+      toast.error("Failed to enhance with AI: " + error.message);
     } finally {
       setEnhancingChapter(null);
     }
@@ -126,29 +135,49 @@ export default function BookAuthor() {
 
   const removeChapterImage = (chapterIndex, imageIndex) => {
     const chapter = book.chapters[chapterIndex];
-    const newImages = chapter.images.filter((_, idx) => idx !== imageIndex);
+    const newImages = (chapter.images || []).filter((_, idx) => idx !== imageIndex);
     updateChapter(chapterIndex, "images", newImages);
   };
 
   const handleSave = async () => {
+    if (!book.title || !book.topic) {
+      toast.error("Please fill in title and topic");
+      return;
+    }
+
     setSaving(true);
     try {
       const user = await base44.auth.me();
+      
+      const bookData = {
+        title: book.title,
+        subtitle: book.subtitle || "",
+        topic: book.topic,
+        level: book.level,
+        adult_content: book.adult_content,
+        chapters: book.chapters || [],
+        author_name: user?.full_name || "Anonymous",
+        status: "draft",
+        word_count: (book.chapters || []).reduce((sum, ch) => sum + (ch.content?.length || 0), 0),
+        estimated_pages: Math.ceil(((book.chapters || []).reduce((sum, ch) => sum + (ch.content?.length || 0), 0)) / 2000)
+      };
+
+      let savedBook;
       if (bookId) {
-        await base44.entities.Book.update(bookId, book);
+        await base44.entities.Book.update(bookId, bookData);
+        savedBook = { id: bookId, ...bookData };
+        toast.success("Book updated successfully!");
       } else {
-        const newBook = await base44.entities.Book.create({
-          ...book,
-          author_name: user?.full_name || "Anonymous",
-          status: "completed"
-        });
-        navigate(`${createPageUrl("BookAuthor")}?id=${newBook.id}`);
+        savedBook = await base44.entities.Book.create(bookData);
+        toast.success("Book created successfully!");
+        navigate(`${createPageUrl("BookAuthor")}?id=${savedBook.id}`, { replace: true });
       }
-      queryClient.invalidateQueries(['book', bookId]);
+      
+      queryClient.invalidateQueries(['book', bookId || savedBook.id]);
       queryClient.invalidateQueries(['books']);
     } catch (error) {
       console.error("Save error:", error);
-      alert("Failed to save book");
+      toast.error("Failed to save book: " + error.message);
     } finally {
       setSaving(false);
     }
@@ -156,7 +185,7 @@ export default function BookAuthor() {
 
   const handleExportPDF = async (format) => {
     if (!bookId) {
-      alert("Please save the book first");
+      toast.error("Please save the book first");
       return;
     }
 
@@ -176,16 +205,21 @@ export default function BookAuthor() {
       a.click();
       window.URL.revokeObjectURL(url);
       a.remove();
+      toast.success("PDF exported successfully!");
     } catch (error) {
       console.error("Export error:", error);
-      alert("Failed to export PDF: " + error.message);
+      toast.error("Failed to export PDF: " + error.message);
     } finally {
       setExporting(false);
     }
   };
 
   if (isLoading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    );
   }
 
   return (
@@ -296,7 +330,7 @@ export default function BookAuthor() {
         </Card>
 
         <div className="space-y-4 mb-6">
-          {book.chapters.map((chapter, index) => (
+          {(book.chapters || []).map((chapter, index) => (
             <Card key={index} className="glass-effect border-0 p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3 flex-1">
