@@ -51,7 +51,7 @@ Return ONLY this JSON structure:
 
         console.log("Calling Grok API...");
 
-        // Call Grok API
+        // Call Grok API with updated model
         const grokResponse = await fetch(GROK_API_URL, {
             method: 'POST',
             headers: {
@@ -59,7 +59,7 @@ Return ONLY this JSON structure:
                 'Authorization': `Bearer ${grokApiKey}`
             },
             body: JSON.stringify({
-                model: "grok-beta",
+                model: "grok-3",
                 messages: [
                     {
                         role: "system",
@@ -124,7 +124,7 @@ Return ONLY this JSON structure:
             success: true,
             brainstorm: brainstormResults,
             usage: {
-                model: "grok-beta",
+                model: "grok-3",
                 tokens: grokData.usage?.total_tokens || 0
             }
         });
