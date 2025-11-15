@@ -4,7 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { 
-  Plus, Trash2, Save, ArrowLeft, Wand2, GripVertical, Image as ImageIcon, Loader2
+  Plus, Trash2, Save, ArrowLeft, Wand2, GripVertical, Image as ImageIcon, 
+  Loader2, Download, FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import EnhancedImageGenerator from "../components/EnhancedImageGenerator";
 
 export default function BookAuthor() {
   const navigate = useNavigate();
@@ -29,7 +31,9 @@ export default function BookAuthor() {
   });
   const [saving, setSaving] = useState(false);
   const [enhancingChapter, setEnhancingChapter] = useState(null);
-  const [generatingImage, setGeneratingImage] = useState(null);
+  const [showImageGenerator, setShowImageGenerator] = useState(false);
+  const [currentChapterForImage, setCurrentChapterForImage] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
   const { data: existingBook, isLoading } = useQuery({
     queryKey: ['book', bookId],
@@ -102,30 +106,20 @@ export default function BookAuthor() {
     }
   };
 
-  const generateChapterImage = async (index) => {
-    setGeneratingImage(index);
-    try {
-      const chapter = book.chapters[index];
-      
-      const imagePrompt = book.adult_content
-        ? `Artistic adult-themed illustration for "${chapter.title}". Topic: ${book.topic}. Sensual, mature, artistic photography style. High quality, professional lighting.`
-        : `Professional educational illustration for "${chapter.title}". Topic: ${book.topic}. Modern, clean design with purple and blue gradients.`;
+  const openImageGenerator = (chapterIndex) => {
+    const chapter = book.chapters[chapterIndex];
+    setCurrentChapterForImage({
+      index: chapterIndex,
+      prompt: `${chapter.title}. ${book.topic}. ${book.level} level book illustration.`
+    });
+    setShowImageGenerator(true);
+  };
 
-      const imageResult = await base44.integrations.Core.GenerateImage({
-        prompt: imagePrompt
-      });
-
-      if (imageResult?.url) {
-        const currentImages = chapter.images || [];
-        updateChapter(index, "images", [...currentImages, imageResult.url]);
-      } else {
-        throw new Error("No image URL returned");
-      }
-    } catch (error) {
-      console.error("Image generation error:", error);
-      alert("Failed to generate image: " + error.message);
-    } finally {
-      setGeneratingImage(null);
+  const handleImageGenerated = (imageUrl) => {
+    if (currentChapterForImage !== null) {
+      const chapter = book.chapters[currentChapterForImage.index];
+      const currentImages = chapter.images || [];
+      updateChapter(currentChapterForImage.index, "images", [...currentImages, imageUrl]);
     }
   };
 
@@ -159,6 +153,36 @@ export default function BookAuthor() {
     }
   };
 
+  const handleExportPDF = async (format) => {
+    if (!bookId) {
+      alert("Please save the book first");
+      return;
+    }
+
+    setExporting(true);
+    try {
+      const response = await base44.functions.invoke('exportBookPDF', {
+        bookId,
+        format
+      });
+
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${book.title}_${format}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+    } catch (error) {
+      console.error("Export error:", error);
+      alert("Failed to export PDF: " + error.message);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
@@ -182,10 +206,32 @@ export default function BookAuthor() {
               </p>
             </div>
           </div>
-          <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700">
-            <Save className="w-4 h-4 mr-2" />
-            {saving ? "Saving..." : "Save Book"}
-          </Button>
+          <div className="flex gap-2">
+            {bookId && (
+              <div className="flex gap-1">
+                <Button 
+                  variant="outline" 
+                  onClick={() => handleExportPDF('standard')}
+                  disabled={exporting}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  PDF
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => handleExportPDF('kdp')}
+                  disabled={exporting}
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  KDP
+                </Button>
+              </div>
+            )}
+            <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700">
+              <Save className="w-4 h-4 mr-2" />
+              {saving ? "Saving..." : "Save Book"}
+            </Button>
+          </div>
         </div>
 
         <Card className="glass-effect border-0 p-8 mb-6">
@@ -278,14 +324,9 @@ export default function BookAuthor() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => generateChapterImage(index)}
-                    disabled={generatingImage === index}
+                    onClick={() => openImageGenerator(index)}
                   >
-                    {generatingImage === index ? (
-                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                    ) : (
-                      <ImageIcon className="w-4 h-4 mr-1" />
-                    )}
+                    <ImageIcon className="w-4 h-4 mr-1" />
                     Image
                   </Button>
                   <Button
@@ -353,6 +394,17 @@ export default function BookAuthor() {
           Add Chapter
         </Button>
       </div>
+
+      <EnhancedImageGenerator
+        open={showImageGenerator}
+        onClose={() => {
+          setShowImageGenerator(false);
+          setCurrentChapterForImage(null);
+        }}
+        onImageGenerated={handleImageGenerated}
+        defaultPrompt={currentChapterForImage?.prompt || ""}
+        adultContent={book.adult_content}
+      />
     </div>
   );
 }
